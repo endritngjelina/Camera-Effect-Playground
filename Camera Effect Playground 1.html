@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Effects Playground Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #007AFF;
+            --secondary: #5856D6;
+            --accent: #FF2D92;
+            --dark-bg: #121212;
+            --darker-bg: #0d0d0d;
+            --panel-bg: rgba(30, 30, 30, 0.7);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --success: #30D158;
+            --warning: #FF9500;
+            --danger: #FF3B30;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(45deg, var(--primary), var(--secondary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 30px;
+            padding: 30px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .video-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+            position: relative;
+        }
+
+        .video-container {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            background: #000;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+            border: 2px solid var(--border-color);
+            max-width: 100%;
+            width: 100%;
+        }
+
+        #video, #webglCanvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            border-radius: 18px;
+            width: 100%;
+        }
+
+        #video {
+            transform: scaleX(-1);
+            display: none;
+        }
+
+        #webglCanvas {
+            background: #000;
+        }
+
+        .controls-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid var(--border-color);
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .controls-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .controls-panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .controls-panel::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .section h3 {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            color: var(--primary);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section h3 i {
+            font-size: 1.2rem;
+            color: var(--accent);
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .effect-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: white;
+            padding: 14px 10px;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+            font-weight: 500;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .effect-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-3px);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .effect-btn.active {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            border-color: var(--primary);
+            box-shadow: 0 0 25px rgba(0, 122, 255, 0.4);
+        }
+
+        .effect-btn i {
+            font-size: 1.4rem;
+            margin-bottom: 5px;
+        }
+
+        .slider-container {
+            margin-bottom: 22px;
+        }
+
+        .slider-container label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.15);
+            outline: none;
+            -webkit-appearance: none;
+            margin-bottom: 10px;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 122, 255, 0.6);
+            border: 2px solid white;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 0 15px rgba(0, 122, 255, 0.6);
+        }
+
+        .color-picker-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .color-picker-container label {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .color-picker {
+            width: 45px;
+            height: 45px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            background: transparent;
+            padding: 0;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        .primary-btn {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 16px 35px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(0, 122, 255, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 200px;
+            justify-content: center;
+        }
+
+        .primary-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 122, 255, 0.5);
+        }
+
+        .secondary-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid var(--border-color);
+            padding: 16px 35px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 200px;
+            justify-content: center;
+        }
+
+        .secondary-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+
+        .performance-monitor {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 25px;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 0.9rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .performance-monitor h4 {
+            color: var(--warning);
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .fps-counter {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .performance-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .stat {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            flex-direction: column;
+        }
+
+        .loading-content {
+            text-align: center;
+            color: white;
+            max-width: 500px;
+            padding: 30px;
+        }
+
+        .spinner {
+            width: 70px;
+            height: 70px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1.2s linear infinite;
+            margin: 0 auto 30px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: var(--danger);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            margin: 20px;
+            text-align: center;
+            font-weight: 600;
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            box-shadow: 0 5px 20px rgba(255, 59, 48, 0.4);
+        }
+
+        .effect-presets {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .preset-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .preset-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
+        }
+
+        .preset-btn.active {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            border-color: var(--primary);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .indicator.active {
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+        }
+
+        .indicator.inactive {
+            background: var(--danger);
+        }
+
+        .effect-intensity {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                padding: 20px;
+                gap: 25px;
+            }
+            
+            .video-container {
+                max-width: 800px;
+                margin: 0 auto;
+            }
+            
+            .controls-panel {
+                max-height: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.2rem;
+            }
+            
+            .header p {
+                font-size: 1rem;
+            }
+            
+            .button-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .primary-btn, .secondary-btn {
+                min-width: 160px;
+                padding: 14px 25px;
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .button-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .primary-btn, .secondary-btn {
+                width: 100%;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+
+        .powered-by {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            opacity: 0.7;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h2>Initializing Camera Effects Playground Pro</h2>
+            <p>Loading advanced WebGL rendering engine...</p>
+            <div class="powered-by">Powered by WebGL 2.0 & GPU Acceleration</div>
+        </div>
+    </div>
+
+    <header class="header">
+        <h1>Camera Effects Playground Pro</h1>
+        <p>Professional real-time video processing with advanced WebGL effects and GPU acceleration</p>
+    </header>
+
+    <div class="main-container">
+        <div class="video-section">
+            <div class="video-container">
+                <video id="video" width="1280" height="720" autoplay muted playsinline></video>
+                <canvas id="webglCanvas" width="1280" height="720"></canvas>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="primary-btn" id="startBtn">
+                    <i class="fas fa-camera"></i> Start Camera
+                </button>
+                <button class="secondary-btn" id="captureBtn" style="display: none;">
+                    <i class="fas fa-camera-retro"></i> Capture Photo
+                </button>
+                <button class="secondary-btn" id="recordBtn" style="display: none;">
+                    <i class="fas fa-video"></i> Start Recording
+                </button>
+                <button class="secondary-btn" id="screenshotBtn" style="display: none;">
+                    <i class="fas fa-download"></i> Save Screenshot
+                </button>
+            </div>
+        </div>
+
+        <div class="controls-panel">
+            <div class="section">
+                <h3><i class="fas fa-magic"></i> Visual Effects</h3>
+                <div class="button-grid">
+                    <button class="effect-btn active" data-effect="none">
+                        <i class="fas fa-eye"></i> Normal
+                    </button>
+                    <button class="effect-btn" data-effect="grayscale">
+                        <i class="fas fa-moon"></i> Grayscale
+                    </button>
+                    <button class="effect-btn" data-effect="invert">
+                        <i class="fas fa-adjust"></i> Invert
+                    </button>
+                    <button class="effect-btn" data-effect="sepia">
+                        <i class="fas fa-image"></i> Sepia
+                    </button>
+                    <button class="effect-btn" data-effect="pixelate">
+                        <i class="fas fa-th-large"></i> Pixelate
+                    </button>
+                    <button class="effect-btn" data-effect="rgbsplit">
+                        <i class="fas fa-sliders-h"></i> RGB Split
+                    </button>
+                    <button class="effect-btn" data-effect="blur">
+                        <i class="fas fa-blur"></i> Blur
+                    </button>
+                    <button class="effect-btn" data-effect="edge">
+                        <i class="fas fa-drafting-compass"></i> Edge Detect
+                    </button>
+                    <button class="effect-btn" data-effect="emboss">
+                        <i class="fas fa-mountain"></i> Emboss
+                    </button>
+                    <button class="effect-btn" data-effect="vintage">
+                        <i class="fas fa-camera-retro"></i> Vintage
+                    </button>
+                    <button class="effect-btn" data-effect="neon">
+                        <i class="fas fa-lightbulb"></i> Neon Glow
+                    </button>
+                    <button class="effect-btn" data-effect="chromatic">
+                        <i class="fas fa-rainbow"></i> Chromatic
+                    </button>
+                    <button class="effect-btn" data-effect="thermal">
+                        <i class="fas fa-fire"></i> Thermal
+                    </button>
+                    <button class="effect-btn" data-effect="kaleidoscope">
+                        <i class="fas fa-snowflake"></i> Kaleidoscope
+                    </button>
+                </div>
+                
+                <div class="effect-presets">
+                    <button class="preset-btn" data-preset="portrait">Portrait</button>
+                    <button class="preset-btn" data-preset="cinematic">Cinematic</button>
+                    <button class="preset-btn" data-preset="retro">Retro</button>
+                    <button class="preset-btn" data-preset="cyberpunk">Cyberpunk</button>
+                    <button class="preset-btn" data-preset="nightvision">Night Vision</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3><i class="fas fa-sliders-h"></i> Effect Parameters</h3>
+                <div class="slider-container">
+                    <label>
+                        Intensity 
+                        <span class="effect-intensity" id="intensityValue">50%</span>
+                    </label>
+                    <input type="range" class="slider" id="intensity" min="0" max="100" value="50">
+                </div>
+                
+                <div class="slider-container">
+                    <label>
+                        Brightness 
+                        <span class="effect-intensity" id="brightnessValue">100%</span>
+                    </label>
+                    <input type="range" class="slider" id="brightness" min="0" max="200" value="100">
+                </div>
+                
+                <div class="slider-container">
+                    <label>
+                        Contrast 
+                        <span class="effect-intensity" id="contrastValue">100%</span>
+                    </label>
+                    <input type="range" class="slider" id="contrast" min="0" max="200" value="100">
+                </div>
+                
+                <div class="slider-container">
+                    <label>
+                        Saturation 
+                        <span class="effect-intensity" id="saturationValue">100%</span>
+                    </label>
+                    <input type="range" class="slider" id="saturation" min="0" max="200" value="100">
+                </div>
+            </div>
+
+            <div class="section">
+                <h3><i class="fas fa-palette"></i> Color Effects</h3>
+                <div class="color-picker-container">
+                    <label>Tint Color:</label>
+                    <input type="color" class="color-picker" id="tintColor" value="#ff0000">
+                </div>
+                
+                <div class="slider-container">
+                    <label>
+                        Hue Shift 
+                        <span class="effect-intensity" id="hueValue">0°</span>
+                    </label>
+                    <input type="range" class="slider" id="hue" min="0" max="360" value="0">
+                </div>
+            </div>
+
+            <div class="section">
+                <h3><i class="fas fa-cogs"></i> Advanced Settings</h3>
+                <div class="slider-container">
+                    <label>
+                        Pixel Size 
+                        <span class="effect-intensity" id="pixelSizeValue">8px</span>
+                    </label>
+                    <input type="range" class="slider" id="pixelSize" min="2" max="20" value="8">
+                </div>
+                
+                <div class="slider-container">
+                    <label>
+                        RGB Split Distance 
+                        <span class="effect-intensity" id="rgbSplitValue">5px</span>
+                    </label>
+                    <input type="range" class="slider" id="rgbSplit" min="1" max="20" value="5">
+                </div>
+                
+                <div class="slider-container">
+                    <label>
+                        Blur Radius 
+                        <span class="effect-intensity" id="blurRadiusValue">3px</span>
+                    </label>
+                    <input type="range" class="slider" id="blurRadius" min="0" max="10" value="3">
+                </div>
+            </div>
+
+            <div class="performance-monitor">
+                <h4><i class="fas fa-tachometer-alt"></i> Performance Monitor</h4>
+                <div class="performance-stats">
+                    <div class="stat">
+                        <div class="fps-counter" id="fpsCounter">FPS: 60</div>
+                        <div>Target: 60 FPS</div>
+                    </div>
+                    <div class="stat">
+                        <div>Processing: <span id="processingTime">0ms</span></div>
+                        <div>Resolution: <span id="resolution">1280x720</span></div>
+                    </div>
+                </div>
+                <div class="status-indicator">
+                    <span class="indicator active" id="gpuIndicator"></span>
+                    <span>WebGL 2.0 Acceleration Active</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class CameraEffectsPlayground {
+            constructor() {
+                this.video = document.getElementById('video');
+                this.canvas = document.getElementById('webglCanvas');
+                this.gl = this.canvas.getContext('webgl2', { antialias: false });
+                this.isProcessing = false;
+                this.currentEffect = 'none';
+                this.stream = null;
+                this.animationFrame = null;
+                this.mediaRecorder = null;
+                this.recordedChunks = [];
+                this.program = null;
+                this.texture = null;
+                this.startTime = 0;
+                
+                // Performance monitoring
+                this.fps = 0;
+                this.frameCount = 0;
+                this.lastTime = performance.now();
+                this.processingTime = 0;
+                
+                // Effect parameters
+                this.params = {
+                    intensity: 50,
+                    brightness: 100,
+                    contrast: 100,
+                    saturation: 100,
+                    hue: 0,
+                    pixelSize: 8,
+                    rgbSplit: 5,
+                    blurRadius: 3,
+                    tintColor: '#ff0000'
+                };
+                
+                // Initialize WebGL
+                this.initWebGL();
+                this.init();
+            }
+            
+            initWebGL() {
+                if (!this.gl) {
+                    this.showError('WebGL 2.0 is not supported in your browser. Please try a modern browser.');
+                    return;
+                }
+                
+                // Create vertex and fragment shaders
+                const vertexShaderSource = `
+                    #version 300 es
+                    in vec2 aPosition;
+                    in vec2 aTexCoord;
+                    out vec2 vTexCoord;
+                    
+                    void main() {
+                        gl_Position = vec4(aPosition, 0.0, 1.0);
+                        vTexCoord = aTexCoord;
+                    }
+                `;
+                
+                const fragmentShaderSource = `
+                    #version 300 es
+                    precision highp float;
+                    
+                    uniform sampler2D uVideoTexture;
+                    uniform float uIntensity;
+                    uniform float uBrightness;
+                    uniform float uContrast;
+                    uniform float uSaturation;
+                    uniform float uHue;
+                    uniform vec3 uTintColor;
+                    uniform float uPixelSize;
+                    uniform float uRGBSplit;
+                    uniform float uBlurRadius;
+                    uniform int uEffect;
+                    uniform float uTime;
+                    
+                    in vec2 vTexCoord;
+                    out vec4 outColor;
+                    
+                    // Grayscale conversion
+                    float grayscale(vec3 color) {
+                        return dot(color, vec3(0.299, 0.587, 0.114));
+                    }
+                    
+                    // Hue rotation matrix
+                    mat3 hueRotationMatrix(float angle) {
+                        float c = cos(angle);
+                        float s = sin(angle);
+                        vec3 weights = vec3(0.213, 0.715, 0.072);
+                        mat3 m = mat3(
+                            vec3(c + weights.r * (1.0 - c), weights.r * (1.0 - c) - weights.g * s, weights.r * (1.0 - c) - weights.b * s,
+                            vec3(weights.g * (1.0 - c) + weights.r * s, c + weights.g * (1.0 - c), weights.g * (1.0 - c) - weights.b * s,
+                            vec3(weights.b * (1.0 - c) - weights.r * s, weights.b * (1.0 - c) + weights.g * s, c + weights.b * (1.0 - c))
+                        );
+                        return m;
+                    }
+                    
+                    // Apply chromatic aberration effect
+                    vec3 applyChromaticAberration(vec2 uv) {
+                        float amount = uRGBSplit * 0.01;
+                        vec2 direction = vec2(1.0, 1.0);
+                        
+                        vec2 uvR = uv - direction * amount;
+                        vec2 uvG = uv;
+                        vec2 uvB = uv + direction * amount;
+                        
+                        float r = texture(uVideoTexture, uvR).r;
+                        float g = texture(uVideoTexture, uvG).g;
+                        float b = texture(uVideoTexture, uvB).b;
+                        
+                        return vec3(r, g, b);
+                    }
+                    
+                    // Apply pixelation effect
+                    vec3 applyPixelation(vec2 uv) {
+                        vec2 pixelSize = vec2(uPixelSize) / vec2(textureSize(uVideoTexture, 0));
+                        vec2 coord = floor(uv / pixelSize) * pixelSize;
+                        return texture(uVideoTexture, coord + pixelSize * 0.5).rgb;
+                    }
+                    
+                    // Apply thermal effect
+                    vec3 applyThermal(vec3 color) {
+                        float temp = grayscale(color);
+                        vec3 thermal;
+                        
+                        if (temp < 0.25) {
+                            thermal = mix(vec3(0.0, 0.0, 0.3), vec3(0.0, 0.0, 1.0), temp * 4.0);
+                        } else if (temp < 0.5) {
+                            thermal = mix(vec3(0.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0), (temp - 0.25) * 4.0);
+                        } else if (temp < 0.75) {
+                            thermal = mix(vec3(1.0, 0.0, 0.0), vec3(1.0, 1.0, 0.0), (temp - 0.5) * 4.0);
+                        } else {
+                            thermal = mix(vec3(1.0, 1.0, 0.0), vec3(1.0, 1.0, 1.0), (temp - 0.75) * 4.0);
+                        }
+                        
+                        return thermal;
+                    }
+                    
+                    // Apply kaleidoscope effect
+                    vec3 applyKaleidoscope(vec2 uv) {
+                        vec2 center = vec2(0.5);
+                        vec2 offset = uv - center;
+                        float angle = atan(offset.y, offset.x);
+                        float radius = length(offset);
+                        
+                        // Mirroring
+                        angle = mod(angle, radians(60.0));
+                        if (angle > radians(30.0)) {
+                            angle = radians(60.0) - angle;
+                        }
+                        
+                        vec2 newUV = center + radius * vec2(cos(angle), sin(angle));
+                        return texture(uVideoTexture, newUV).rgb;
+                    }
+                    
+                    void main() {
+                        vec2 uv = vTexCoord;
+                        vec3 color = texture(uVideoTexture, uv).rgb;
+                        
+                        // Apply selected effect
+                        if (uEffect == 1) { // Grayscale
+                            float gray = grayscale(color);
+                            color = mix(color, vec3(gray), uIntensity);
+                        } else if (uEffect == 2) { // Invert
+                            color = mix(color, vec3(1.0) - color, uIntensity);
+                        } else if (uEffect == 3) { // Sepia
+                            vec3 sepia = vec3(
+                                dot(color, vec3(0.393, 0.769, 0.189)),
+                                dot(color, vec3(0.349, 0.686, 0.168)),
+                                dot(color, vec3(0.272, 0.534, 0.131))
+                            );
+                            color = mix(color, sepia, uIntensity);
+                        } else if (uEffect == 4) { // Pixelate
+                            vec3 pixelated = applyPixelation(uv);
+                            color = mix(color, pixelated, uIntensity);
+                        } else if (uEffect == 5) { // RGB Split
+                            vec3 rgbSplit = applyChromaticAberration(uv);
+                            color = mix(color, rgbSplit, uIntensity);
+                        } else if (uEffect == 6) { // Blur
+                            // Simple blur implementation
+                            vec3 blurred = vec3(0.0);
+                            float count = 0.0;
+                            float radius = uBlurRadius * 0.01;
+                            
+                            for (float x = -4.0; x <= 4.0; x++) {
+                                for (float y = -4.0; y <= 4.0; y++) {
+                                    vec2 offset = vec2(x, y) * radius;
+                                    blurred += texture(uVideoTexture, uv + offset).rgb;
+                                    count += 1.0;
+                                }
+                            }
+                            
+                            blurred /= count;
+                            color = mix(color, blurred, uIntensity);
+                        } else if (uEffect == 7) { // Edge Detection
+                            // Simple edge detection
+                            vec2 pixelSize = 1.0 / vec2(textureSize(uVideoTexture, 0));
+                            
+                            vec3 top = texture(uVideoTexture, uv + vec2(0.0, pixelSize.y)).rgb;
+                            vec3 bottom = texture(uVideoTexture, uv - vec2(0.0, pixelSize.y)).rgb;
+                            vec3 left = texture(uVideoTexture, uv - vec2(pixelSize.x, 0.0)).rgb;
+                            vec3 right = texture(uVideoTexture, uv + vec2(pixelSize.x, 0.0)).rgb;
+                            
+                            vec3 horizontal = abs(top - bottom);
+                            vec3 vertical = abs(left - right);
+                            
+                            vec3 edges = sqrt(horizontal * horizontal + vertical * vertical);
+                            edges = vec3(1.0) - edges;
+                            
+                            color = mix(color, edges, uIntensity);
+                        } else if (uEffect == 8) { // Emboss
+                            vec2 pixelSize = 1.0 / vec2(textureSize(uVideoTexture, 0));
+                            vec3 current = texture(uVideoTexture, uv).rgb;
+                            vec3 offset = texture(uVideoTexture, uv - pixelSize).rgb;
+                            
+                            vec3 emboss = (current - offset) + 0.5;
+                            color = mix(color, emboss, uIntensity);
+                        } else if (uEffect == 9) { // Vintage
+                            vec3 vintage = color;
+                            vintage.r = (vintage.r * 0.393) + (vintage.g * 0.769) + (vintage.b * 0.189);
+                            vintage.g = (vintage.r * 0.349) + (vintage.g * 0.686) + (vintage.b * 0.168);
+                            vintage.b = (vintage.r * 0.272) + (vintage.g * 0.534) + (vintage.b * 0.131);
+                            
+                            // Add vignette
+                            vec2 center = vec2(0.5);
+                            float dist = distance(uv, center);
+                            float vignette = 1.0 - dist * 0.5;
+                            
+                            vintage *= vignette;
+                            
+                            color = mix(color, vintage, uIntensity);
+                        } else if (uEffect == 10) { // Neon Glow
+                            vec3 neon = color * color * 2.0;
+                            neon = clamp(neon, 0.0, 1.0);
+                            color = mix(color, neon, uIntensity);
+                        } else if (uEffect == 11) { // Chromatic Aberration
+                            vec3 chromatic = applyChromaticAberration(uv);
+                            color = mix(color, chromatic, uIntensity);
+                        } else if (uEffect == 12) { // Thermal
+                            vec3 thermal = applyThermal(color);
+                            color = mix(color, thermal, uIntensity);
+                        } else if (uEffect == 13) { // Kaleidoscope
+                            vec3 kaleido = applyKaleidoscope(uv);
+                            color = mix(color, kaleido, uIntensity);
+                        }
+                        
+                        // Apply global adjustments
+                        // Brightness
+                        color *= uBrightness / 100.0;
+                        
+                        // Contrast
+                        color = (color - 0.5) * uContrast / 50.0 + 0.5;
+                        
+                        // Saturation
+                        float gray = grayscale(color);
+                        color = mix(vec3(gray), color, uSaturation / 100.0);
+                        
+                        // Hue rotation
+                        mat3 hueMatrix = hueRotationMatrix(uHue * 0.0174533);
+                        color = hueMatrix * color;
+                        
+                        // Tint color
+                        color = mix(color, uTintColor, 0.1);
+                        
+                        outColor = vec4(color, 1.0);
+                    }
+                `;
+                
+                // Compile shaders and create program
+                const vertexShader = this.compileShader(this.gl.VERTEX_SHADER, vertexShaderSource);
+                const fragmentShader = this.compileShader(this.gl.FRAGMENT_SHADER, fragmentShaderSource);
+                
+                this.program = this.gl.createProgram();
+                this.gl.attachShader(this.program, vertexShader);
+                this.gl.attachShader(this.program, fragmentShader);
+                this.gl.linkProgram(this.program);
+                
+                if (!this.gl.getProgramParameter(this.program, this.gl.LINK_STATUS)) {
+                    console.error('Shader program linking failed:', this.gl.getProgramInfoLog(this.program));
+                }
+                
+                // Create vertex buffer
+                const vertices = new Float32Array([
+                    // Positions     // Texture Coords
+                    -1.0, -1.0,     0.0, 0.0,
+                    1.0, -1.0,      1.0, 0.0,
+                    -1.0, 1.0,      0.0, 1.0,
+                    1.0, 1.0,       1.0, 1.0
+                ]);
+                
+                const vertexBuffer = this.gl.createBuffer();
+                this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vertexBuffer);
+                this.gl.bufferData(this.gl.ARRAY_BUFFER, vertices, this.gl.STATIC_DRAW);
+                
+                // Set up vertex attributes
+                const positionAttributeLocation = this.gl.getAttribLocation(this.program, 'aPosition');
+                const texCoordAttributeLocation = this.gl.getAttribLocation(this.program, 'aTexCoord');
+                
+                this.gl.vertexAttribPointer(positionAttributeLocation, 2, this.gl.FLOAT, false, 4 * 4, 0);
+                this.gl.vertexAttribPointer(texCoordAttributeLocation, 2, this.gl.FLOAT, false, 4 * 4, 2 * 4);
+                
+                this.gl.enableVertexAttribArray(positionAttributeLocation);
+                this.gl.enableVertexAttribArray(texCoordAttributeLocation);
+                
+                // Create texture for video
+                this.texture = this.gl.createTexture();
+                this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+                this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+                this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+                this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
+                this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
+                
+                // Set viewport
+                this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+            }
+            
+            compileShader(type, source) {
+                const shader = this.gl.createShader(type);
+                this.gl.shaderSource(shader, source);
+                this.gl.compileShader(shader);
+                
+                if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+                    console.error('Shader compilation error:', this.gl.getShaderInfoLog(shader));
+                    return null;
+                }
+                
+                return shader;
+            }
+            
+            init() {
+                this.setupEventListeners();
+                this.hideLoading();
+            }
+            
+            setupEventListeners() {
+                // Camera controls
+                document.getElementById('startBtn').addEventListener('click', () => this.startCamera());
+                document.getElementById('captureBtn').addEventListener('click', () => this.capturePhoto());
+                document.getElementById('recordBtn').addEventListener('click', () => this.toggleRecording());
+                document.getElementById('screenshotBtn').addEventListener('click', () => this.captureScreenshot());
+                
+                // Effect buttons
+                document.querySelectorAll('.effect-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.setEffect(e.target.closest('.effect-btn').dataset.effect, e.target));
+                });
+                
+                // Preset buttons
+                document.querySelectorAll('.preset-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.applyPreset(e.target.dataset.preset));
+                });
+                
+                // Parameter sliders
+                this.setupSliders();
+                
+                // Window resize
+                window.addEventListener('resize', () => this.handleResize());
+            }
+            
+            setupSliders() {
+                const sliders = [
+                    { id: 'intensity', param: 'intensity', suffix: '%' },
+                    { id: 'brightness', param: 'brightness', suffix: '%' },
+                    { id: 'contrast', param: 'contrast', suffix: '%' },
+                    { id: 'saturation', param: 'saturation', suffix: '%' },
+                    { id: 'hue', param: 'hue', suffix: '°' },
+                    { id: 'pixelSize', param: 'pixelSize', suffix: 'px' },
+                    { id: 'rgbSplit', param: 'rgbSplit', suffix: 'px' },
+                    { id: 'blurRadius', param: 'blurRadius', suffix: 'px' }
+                ];
+                
+                sliders.forEach(slider => {
+                    const element = document.getElementById(slider.id);
+                    const valueElement = document.getElementById(slider.id + 'Value');
+                    
+                    element.addEventListener('input', (e) => {
+                        this.params[slider.param] = parseFloat(e.target.value);
+                        valueElement.textContent = e.target.value + slider.suffix;
+                    });
+                });
+                
+                // Color picker
+                document.getElementById('tintColor').addEventListener('input', (e) => {
+                    this.params.tintColor = e.target.value;
+                });
+            }
+            
+            applyPreset(preset) {
+                switch(preset) {
+                    case 'portrait':
+                        this.params.brightness = 110;
+                        this.params.contrast = 110;
+                        this.params.saturation = 90;
+                        this.params.tintColor = '#ffb3c1';
+                        break;
+                    case 'cinematic':
+                        this.params.brightness = 90;
+                        this.params.contrast = 120;
+                        this.params.saturation = 85;
+                        this.params.tintColor = '#2a2a5a';
+                        break;
+                    case 'retro':
+                        this.params.brightness = 105;
+                        this.params.contrast = 115;
+                        this.params.saturation = 70;
+                        this.params.tintColor = '#d4af37';
+                        break;
+                    case 'cyberpunk':
+                        this.params.brightness = 130;
+                        this.params.contrast = 130;
+                        this.params.saturation = 140;
+                        this.params.tintColor = '#ff00ff';
+                        break;
+                    case 'nightvision':
+                        this.params.brightness = 80;
+                        this.params.contrast = 150;
+                        this.params.saturation = 10;
+                        this.params.tintColor = '#00ff00';
+                        break;
+                }
+                
+                // Update UI
+                document.getElementById('brightness').value = this.params.brightness;
+                document.getElementById('brightnessValue').textContent = this.params.brightness + '%';
+                document.getElementById('contrast').value = this.params.contrast;
+                document.getElementById('contrastValue').textContent = this.params.contrast + '%';
+                document.getElementById('saturation').value = this.params.saturation;
+                document.getElementById('saturationValue').textContent = this.params.saturation + '%';
+                document.getElementById('tintColor').value = this.params.tintColor;
+                
+                // Highlight the active preset
+                document.querySelectorAll('.preset-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.preset === preset);
+                });
+            }
+            
+            async startCamera() {
+                this.showLoading();
+                try {
+                    this.stream = await navigator.mediaDevices.getUserMedia({
+                        video: { 
+                            width: { ideal: 1280 }, 
+                            height: { ideal: 720 },
+                            facingMode: 'user'
+                        },
+                        audio: false
+                    });
+                    
+                    this.video.srcObject = this.stream;
+                    
+                    this.video.onloadedmetadata = () => {
+                        this.canvas.width = this.video.videoWidth;
+                        this.canvas.height = this.video.videoHeight;
+                        document.getElementById('resolution').textContent = 
+                            `${this.video.videoWidth}x${this.video.videoHeight}`;
+                        
+                        this.hideLoading();
+                        this.showControls();
+                        this.startProcessing();
+                    };
+                } catch (error) {
+                    this.hideLoading();
+                    this.showError('Camera access denied or unavailable. Please allow camera permissions.');
+                    console.error('Camera error:', error);
+                }
+            }
+            
+            startProcessing() {
+                this.isProcessing = true;
+                this.startTime = performance.now();
+                this.processFrame();
+                this.startFPSMonitoring();
+            }
+            
+            processFrame() {
+                if (!this.isProcessing) return;
+                
+                const startTime = performance.now();
+                
+                if (this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
+                    this.gl.activeTexture(this.gl.TEXTURE0);
+                    this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+                    this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, this.video);
+                    
+                    this.gl.useProgram(this.program);
+                    
+                    // Set uniforms
+                    const effectMap = {
+                        'none': 0,
+                        'grayscale': 1,
+                        'invert': 2,
+                        'sepia': 3,
+                        'pixelate': 4,
+                        'rgbsplit': 5,
+                        'blur': 6,
+                        'edge': 7,
+                        'emboss': 8,
+                        'vintage': 9,
+                        'neon': 10,
+                        'chromatic': 11,
+                        'thermal': 12,
+                        'kaleidoscope': 13
+                    };
+                    
+                    const effectId = effectMap[this.currentEffect] || 0;
+                    
+                    this.gl.uniform1i(this.gl.getUniformLocation(this.program, 'uEffect'), effectId);
+                    this.gl.uniform1f(this.gl.getUniformLocation(this.program, 'uIntensity'), this.params.intensity / 100);
+                    this.gl.uniform1f(this.gl.getUniformLocation(this.program, 'uBrightness'), this.params.brightness / 100);
+                    this.gl.uniform1f(this.gl.getUniformLocation(this.program, 'uContrast'), this.params.contrast / 100);
+                    this.gl.uniform1f(this.gl.getUniformLocation(this.program, 'uSaturation'), this.params.saturation / 100);
+                    this.gl.uniform1f(this.gl.getUniformLocation(this.program, 'uHue'), this.params.hue);
+                    
+                    // Parse tint color
+                    const hex = this.params.tintColor.replace('#', '');
+                    const r = parseInt(hex.substring(0, 2), 16) / 255;
+                    const g = parseInt(hex.substring(2, 4), 16) / 255;
+                    const b = parseInt(hex.substring(4, 6), 16) / 255;
+                    this.gl.uniform3f(this.gl.getUniformLocation(this.program, 'uTintColor'), r, g, b);
+                    
+                    this.gl.uniform1f(this.gl.getUniformLocation(this.program, 'uPixelSize'), this.params.pixelSize);
+                    this.gl.uniform1f(this.gl.getUniformLocation(this.program, 'uRGBSplit'), this.params.rgbSplit);
+                    this.gl.uniform1f(this.gl.getUniformLocation(this.program, 'uBlurRadius'), this.params.blurRadius);
+                    this.gl.uniform1f(this.gl.getUniformLocation(this.program, 'uTime'), (performance.now() - this.startTime) / 1000);
+                    
+                    // Draw the quad
+                    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+                }
+                
+                this.processingTime = Math.round(performance.now() - startTime);
+                document.getElementById('processingTime').textContent = this.processingTime + 'ms';
+                
+                this.frameCount++;
+                this.animationFrame = requestAnimationFrame(() => this.processFrame());
+            }
+            
+            setEffect(effect, button) {
+                this.currentEffect = effect;
+                
+                // Update button states
+                document.querySelectorAll('.effect-btn').forEach(btn => btn.classList.remove('active'));
+                button.closest('.effect-btn').classList.add('active');
+            }
+            
+            capturePhoto() {
+                const link = document.createElement('a');
+                link.download = `camera-effect-${Date.now()}.png`;
+                link.href = this.canvas.toDataURL('image/png');
+                link.click();
+            }
+            
+            captureScreenshot() {
+                const link = document.createElement('a');
+                link.download = `camera-screenshot-${Date.now()}.png`;
+                
+                // Create a temporary canvas to flip the image
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = this.canvas.width;
+                tempCanvas.height = this.canvas.height;
+                const ctx = tempCanvas.getContext('2d');
+                
+                // Flip horizontally to match the video preview
+                ctx.translate(tempCanvas.width, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(this.canvas, 0, 0);
+                
+                link.href = tempCanvas.toDataURL('image/png');
+                link.click();
+            }
+            
+            toggleRecording() {
+                const recordBtn = document.getElementById('recordBtn');
+                
+                if (!this.mediaRecorder || this.mediaRecorder.state === 'inactive') {
+                    this.startRecording();
+                    recordBtn.innerHTML = '<i class="fas fa-stop-circle"></i> Stop Recording';
+                    recordBtn.style.background = 'linear-gradient(45deg, #FF3B30, #FF2D92)';
+                } else {
+                    this.stopRecording();
+                    recordBtn.innerHTML = '<i class="fas fa-video"></i> Start Recording';
+                    recordBtn.style.background = '';
+                }
+            }
+            
+            startRecording() {
+                const canvasStream = this.canvas.captureStream(30);
+                this.mediaRecorder = new MediaRecorder(canvasStream, { mimeType: 'video/webm;codecs=vp9' });
+                this.recordedChunks = [];
+                
+                this.mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        this.recordedChunks.push(event.data);
+                    }
+                };
+                
+                this.mediaRecorder.onstop = () => {
+                    const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.download = `camera-recording-${Date.now()}.webm`;
+                    link.href = url;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                };
+                
+                this.mediaRecorder.start(1000); // Collect 1000ms chunks
+            }
+            
+            stopRecording() {
+                if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+                    this.mediaRecorder.stop();
+                }
+            }
+            
+            startFPSMonitoring() {
+                setInterval(() => {
+                    const now = performance.now();
+                    const delta = now - this.lastTime;
+                    this.fps = Math.round(1000 / (delta / this.frameCount));
+                    
+                    document.getElementById('fpsCounter').textContent = `FPS: ${this.fps}`;
+                    
+                    this.frameCount = 0;
+                    this.lastTime = now;
+                }, 1000);
+            }
+            
+            showControls() {
+                document.getElementById('startBtn').style.display = 'none';
+                document.getElementById('captureBtn').style.display = 'inline-block';
+                document.getElementById('recordBtn').style.display = 'inline-block';
+                document.getElementById('screenshotBtn').style.display = 'inline-block';
+            }
+            
+            showLoading() {
+                document.getElementById('loadingOverlay').style.display = 'flex';
+            }
+            
+            hideLoading() {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+            
+            showError(message) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+                document.querySelector('.video-section').prepend(errorDiv);
+                
+                setTimeout(() => errorDiv.remove(), 5000);
+            }
+            
+            handleResize() {
+                // Handle responsive behavior
+                if (this.video.videoWidth && this.video.videoHeight) {
+                    this.canvas.width = this.video.videoWidth;
+                    this.canvas.height = this.video.videoHeight;
+                    this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+                    document.getElementById('resolution').textContent = 
+                        `${this.video.videoWidth}x${this.video.videoHeight}`;
+                }
+            }
+            
+            destroy() {
+                this.isProcessing = false;
+                if (this.animationFrame) {
+                    cancelAnimationFrame(this.animationFrame);
+                }
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                }
+            }
+        }
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            const playground = new CameraEffectsPlayground();
+            window.cameraApp = playground;
+        });
+        
+        // Handle page unload
+        window.addEventListener('beforeunload', () => {
+            if (window.cameraApp) {
+                window.cameraApp.destroy();
+            }
+        });
+    </script>
+</body>
+</html>
