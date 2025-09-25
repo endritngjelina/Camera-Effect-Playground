@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Effects Playground</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .camera-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .video-container {
+            position: relative;
+            border-radius: 15px;
+            overflow: hidden;
+            background: #000;
+            margin-bottom: 20px;
+        }
+
+        #video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        #canvas {
+            width: 100%;
+            height: auto;
+            display: none;
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn.active {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .controls-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            height: fit-content;
+        }
+
+        .controls-panel h2 {
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            text-align: center;
+        }
+
+        .effect-group {
+            margin-bottom: 25px;
+        }
+
+        .effect-group h3 {
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            color: #fff;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+            padding-bottom: 8px;
+        }
+
+        .effect-btn {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .effect-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateX(5px);
+        }
+
+        .effect-btn.active {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-weight: 600;
+        }
+
+        .slider-container {
+            margin: 15px 0;
+        }
+
+        .slider-container label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            -webkit-appearance: none;
+            margin-bottom: 10px;
+        }
+
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .stats {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .stats div {
+            margin-bottom: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.1rem;
+        }
+
+        .error {
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid rgba(255, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .camera-controls {
+                gap: 10px;
+            }
+            
+            .btn {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+        }
+
+        .performance-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            z-index: 1000;
+        }
+
+        .fps-good { color: #4CAF50; }
+        .fps-medium { color: #FF9800; }
+        .fps-poor { color: #F44336; }
+    </style>
+</head>
+<body>
+    <div class="performance-indicator" id="performanceIndicator">
+        <div>FPS: <span id="fpsCounter">0</span></div>
+        <div>Frame Time: <span id="frameTime">0ms</span></div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Camera Effects Playground</h1>
+            <p>Professional real-time video effects with advanced image processing</p>
+        </div>
+
+        <div class="main-content">
+            <div class="camera-section">
+                <div class="video-container">
+                    <video id="video" autoplay muted playsinline></video>
+                    <canvas id="canvas"></canvas>
+                </div>
+                
+                <div class="camera-controls">
+                    <button class="btn" id="startBtn">Start Camera</button>
+                    <button class="btn" id="stopBtn" disabled>Stop Camera</button>
+                    <button class="btn" id="captureBtn" disabled>Capture Frame</button>
+                    <button class="btn" id="recordBtn" disabled>Start Recording</button>
+                </div>
+
+                <div class="stats" id="stats" style="display: none;">
+                    <div>Resolution: <span id="resolution">-</span></div>
+                    <div>Active Effect: <span id="activeEffect">None</span></div>
+                    <div>Processing Time: <span id="processingTime">-</span></div>
+                    <div>Memory Usage: <span id="memoryUsage">-</span></div>
+                </div>
+            </div>
+
+            <div class="controls-panel">
+                <h2>Effect Controls</h2>
+                
+                <div class="effect-group">
+                    <h3>Basic Effects</h3>
+                    <button class="effect-btn" data-effect="none">No Effect</button>
+                    <button class="effect-btn" data-effect="invert">Invert Colors</button>
+                    <button class="effect-btn" data-effect="grayscale">Grayscale</button>
+                    <button class="effect-btn" data-effect="sepia">Sepia Tone</button>
+                    <button class="effect-btn" data-effect="pixelate">Pixelate</button>
+                </div>
+
+                <div class="effect-group">
+                    <h3>Advanced Effects</h3>
+                    <button class="effect-btn" data-effect="rgbsplit">RGB Split</button>
+                    <button class="effect-btn" data-effect="blur">Gaussian Blur</button>
+                    <button class="effect-btn" data-effect="sharpen">Sharpen</button>
+                    <button class="effect-btn" data-effect="emboss">Emboss</button>
+                    <button class="effect-btn" data-effect="edge">Edge Detection</button>
+                </div>
+
+                <div class="effect-group">
+                    <h3>Creative Effects</h3>
+                    <button class="effect-btn" data-effect="vintage">Vintage Film</button>
+                    <button class="effect-btn" data-effect="neon">Neon Glow</button>
+                    <button class="effect-btn" data-effect="thermal">Thermal Vision</button>
+                    <button class="effect-btn" data-effect="matrix">Matrix Code</button>
+                    <button class="effect-btn" data-effect="kaleidoscope">Kaleidoscope</button>
+                </div>
+
+                <div class="slider-container">
+                    <label for="intensitySlider">Effect Intensity: <span id="intensityValue">50</span>%</label>
+                    <input type="range" id="intensitySlider" class="slider" min="0" max="100" value="50">
+                </div>
+
+                <div class="slider-container">
+                    <label for="brightnessSlider">Brightness: <span id="brightnessValue">0</span></label>
+                    <input type="range" id="brightnessSlider" class="slider" min="-100" max="100" value="0">
+                </div>
+
+                <div class="slider-container">
+                    <label for="contrastSlider">Contrast: <span id="contrastValue">100</span>%</label>
+                    <input type="range" id="contrastSlider" class="slider" min="0" max="200" value="100">
+                </div>
+
+                <div class="slider-container">
+                    <label for="saturationSlider">Saturation: <span id="saturationValue">100</span>%</label>
+                    <input type="range" id="saturationSlider" class="slider" min="0" max="200" value="100">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class CameraEffectsPlayground {
+            constructor() {
+                this.video = document.getElementById('video');
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.stream = null;
+                this.animationFrame = null;
+                this.currentEffect = 'none';
+                this.isRecording = false;
+                this.mediaRecorder = null;
+                this.recordedChunks = [];
+                
+                // Performance tracking
+                this.frameCount = 0;
+                this.lastTime = performance.now();
+                this.processingTimes = [];
+                
+                // Effect parameters
+                this.effectParams = {
+                    intensity: 50,
+                    brightness: 0,
+                    contrast: 100,
+                    saturation: 100
+                };
+
+                this.initializeEventListeners();
+                this.initializePerformanceMonitoring();
+            }
+
+            initializeEventListeners() {
+                // Camera controls
+                document.getElementById('startBtn').addEventListener('click', () => this.startCamera());
+                document.getElementById('stopBtn').addEventListener('click', () => this.stopCamera());
+                document.getElementById('captureBtn').addEventListener('click', () => this.captureFrame());
+                document.getElementById('recordBtn').addEventListener('click', () => this.toggleRecording());
+
+                // Effect buttons
+                document.querySelectorAll('.effect-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.setEffect(e.target.dataset.effect);
+                        this.updateActiveButton(e.target);
+                    });
+                });
+
+                // Sliders
+                const sliders = ['intensity', 'brightness', 'contrast', 'saturation'];
+                sliders.forEach(slider => {
+                    const element = document.getElementById(`${slider}Slider`);
+                    const valueSpan = document.getElementById(`${slider}Value`);
+                    
+                    element.addEventListener('input', (e) => {
+                        const value = parseInt(e.target.value);
+                        this.effectParams[slider] = value;
+                        valueSpan.textContent = slider === 'brightness' ? value : `${value}${slider === 'intensity' ? '%' : '%'}`;
+                    });
+                });
+
+                // Video loaded event
+                this.video.addEventListener('loadedmetadata', () => {
+                    this.canvas.width = this.video.videoWidth;
+                    this.canvas.height = this.video.videoHeight;
+                    this.updateStats();
+                });
+            }
+
+            async startCamera() {
+                try {
+                    const constraints = {
+                        video: {
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            facingMode: 'user'
+                        }
+                    };
+
+                    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    this.video.srcObject = this.stream;
+                    
+                    this.video.addEventListener('play', () => {
+                        this.canvas.style.display = 'block';
+                        this.video.style.display = 'none';
+                        this.startProcessing();
+                    });
+
+                    this.updateUI(true);
+                    document.getElementById('stats').style.display = 'block';
+                    
+                } catch (error) {
+                    console.error('Error accessing camera:', error);
+                    this.showError('Unable to access camera. Please check permissions.');
+                }
+            }
+
+            stopCamera() {
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                    this.stream = null;
+                }
+                
+                if (this.animationFrame) {
+                    cancelAnimationFrame(this.animationFrame);
+                    this.animationFrame = null;
+                }
+
+                this.canvas.style.display = 'none';
+                this.video.style.display = 'block';
+                this.video.srcObject = null;
+                this.updateUI(false);
+                document.getElementById('stats').style.display = 'none';
+            }
+
+            startProcessing() {
+                const processFrame = () => {
+                    if (this.video.readyState >= 2) {
+                        const startTime = performance.now();
+                        
+                        this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+                        this.applyEffect();
+                        
+                        const endTime = performance.now();
+                        this.processingTimes.push(endTime - startTime);
+                        if (this.processingTimes.length > 60) {
+                            this.processingTimes.shift();
+                        }
+                        
+                        this.frameCount++;
+                    }
+                    
+                    this.animationFrame = requestAnimationFrame(processFrame);
+                };
+                
+                processFrame();
+            }
+
+            applyEffect() {
+                if (this.currentEffect === 'none') {
+                    this.applyBasicAdjustments();
+                    return;
+                }
+
+                const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                const data = imageData.data;
+
+                switch (this.currentEffect) {
+                    case 'invert':
+                        this.invertColors(data);
+                        break;
+                    case 'grayscale':
+                        this.grayscale(data);
+                        break;
+                    case 'sepia':
+                        this.sepia(data);
+                        break;
+                    case 'pixelate':
+                        this.pixelate();
+                        return;
+                    case 'rgbsplit':
+                        this.rgbSplit();
+                        return;
+                    case 'blur':
+                        this.gaussianBlur();
+                        return;
+                    case 'sharpen':
+                        this.sharpen();
+                        return;
+                    case 'emboss':
+                        this.emboss();
+                        return;
+                    case 'edge':
+                        this.edgeDetection();
+                        return;
+                    case 'vintage':
+                        this.vintage(data);
+                        break;
+                    case 'neon':
+                        this.neonGlow(data);
+                        break;
+                    case 'thermal':
+                        this.thermalVision(data);
+                        break;
+                    case 'matrix':
+                        this.matrixCode();
+                        return;
+                    case 'kaleidoscope':
+                        this.kaleidoscope();
+                        return;
+                }
+
+                this.ctx.putImageData(imageData, 0, 0);
+                this.applyBasicAdjustments();
+            }
+
+            // Basic color adjustments
+            applyBasicAdjustments() {
+                const { brightness, contrast, saturation } = this.effectParams;
+                if (brightness === 0 && contrast === 100 && saturation === 100) return;
+
+                this.ctx.filter = `brightness(${100 + brightness}%) contrast(${contrast}%) saturate(${saturation}%)`;
+                this.ctx.drawImage(this.canvas, 0, 0);
+                this.ctx.filter = 'none';
+            }
+
+            // Effect implementations
+            invertColors(data) {
+                const intensity = this.effectParams.intensity / 100;
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i] = data[i] + (255 - data[i] - data[i]) * intensity;
+                    data[i + 1] = data[i + 1] + (255 - data[i + 1] - data[i + 1]) * intensity;
+                    data[i + 2] = data[i + 2] + (255 - data[i + 2] - data[i + 2]) * intensity;
+                }
+            }
+
+            grayscale(data) {
+                const intensity = this.effectParams.intensity / 100;
+                for (let i = 0; i < data.length; i += 4) {
+                    const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+                    data[i] = data[i] + (gray - data[i]) * intensity;
+                    data[i + 1] = data[i + 1] + (gray - data[i + 1]) * intensity;
+                    data[i + 2] = data[i + 2] + (gray - data[i + 2]) * intensity;
+                }
+            }
+
+            sepia(data) {
+                const intensity = this.effectParams.intensity / 100;
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i], g = data[i + 1], b = data[i + 2];
+                    const newR = Math.min(255, (r * 0.393) + (g * 0.769) + (b * 0.189));
+                    const newG = Math.min(255, (r * 0.349) + (g * 0.686) + (b * 0.168));
+                    const newB = Math.min(255, (r * 0.272) + (g * 0.534) + (b * 0.131));
+                    
+                    data[i] = r + (newR - r) * intensity;
+                    data[i + 1] = g + (newG - g) * intensity;
+                    data[i + 2] = b + (newB - b) * intensity;
+                }
+            }
+
+            pixelate() {
+                const size = Math.max(2, 20 * (this.effectParams.intensity / 100));
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                this.ctx.imageSmoothingEnabled = false;
+                this.ctx.drawImage(this.canvas, 0, 0, w, h, 0, 0, w / size, h / size);
+                this.ctx.drawImage(this.canvas, 0, 0, w / size, h / size, 0, 0, w, h);
+                this.ctx.imageSmoothingEnabled = true;
+            }
+
+            rgbSplit() {
+                const offset = this.effectParams.intensity / 5;
+                const originalCanvas = document.createElement('canvas');
+                originalCanvas.width = this.canvas.width;
+                originalCanvas.height = this.canvas.height;
+                const originalCtx = originalCanvas.getContext('2d');
+                originalCtx.drawImage(this.canvas, 0, 0);
+                
+                this.ctx.globalCompositeOperation = 'screen';
+                this.ctx.fillStyle = 'black';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.ctx.globalCompositeOperation = 'lighter';
+                
+                // Red channel
+                this.ctx.globalCompositeOperation = 'lighter';
+                this.ctx.drawImage(originalCanvas, -offset, 0);
+                
+                // Green channel
+                this.ctx.globalCompositeOperation = 'lighter';
+                this.ctx.drawImage(originalCanvas, 0, 0);
+                
+                // Blue channel
+                this.ctx.globalCompositeOperation = 'lighter';
+                this.ctx.drawImage(originalCanvas, offset, 0);
+                
+                this.ctx.globalCompositeOperation = 'source-over';
+            }
+
+            gaussianBlur() {
+                const radius = this.effectParams.intensity / 5;
+                this.ctx.filter = `blur(${radius}px)`;
+                this.ctx.drawImage(this.canvas, 0, 0);
+                this.ctx.filter = 'none';
+            }
+
+            sharpen() {
+                const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                const data = imageData.data;
+                const width = this.canvas.width;
+                const height = this.canvas.height;
+                const intensity = this.effectParams.intensity / 100;
+                
+                const kernel = [
+                    0, -1 * intensity, 0,
+                    -1 * intensity, 4 * intensity + 1, -1 * intensity,
+                    0, -1 * intensity, 0
+                ];
+                
+                this.applyConvolution(data, width, height, kernel);
+                this.ctx.putImageData(imageData, 0, 0);
+            }
+
+            emboss() {
+                const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                const data = imageData.data;
+                const width = this.canvas.width;
+                const height = this.canvas.height;
+                const intensity = this.effectParams.intensity / 100;
+                
+                const kernel = [
+                    -2 * intensity, -1 * intensity, 0,
+                    -1 * intensity, 1, 1 * intensity,
+                    0, 1 * intensity, 2 * intensity
+                ];
+                
+                this.applyConvolution(data, width, height, kernel);
+                this.ctx.putImageData(imageData, 0, 0);
+            }
+
+            edgeDetection() {
+                const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                const data = imageData.data;
+                const width = this.canvas.width;
+                const height = this.canvas.height;
+                const intensity = this.effectParams.intensity / 100;
+                
+                const kernel = [
+                    -1 * intensity, -1 * intensity, -1 * intensity,
+                    -1 * intensity, 8 * intensity, -1 * intensity,
+                    -1 * intensity, -1 * intensity, -1 * intensity
+                ];
+                
+                this.applyConvolution(data, width, height, kernel);
+                this.ctx.putImageData(imageData, 0, 0);
+            }
+
+            vintage(data) {
+                const intensity = this.effectParams.intensity / 100;
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i], g = data[i + 1], b = data[i + 2];
+                    
+                    // Warm tone and slight fade
+                    const newR = Math.min(255, r * 1.1 + 20);
+                    const newG = Math.min(255, g * 0.9 + 10);
+                    const newB = Math.max(0, b * 0.8 - 10);
+                    
+                    data[i] = r + (newR - r) * intensity;
+                    data[i + 1] = g + (newG - g) * intensity;
+                    data[i + 2] = b + (newB - b) * intensity;
+                }
+            }
+
+            neonGlow(data) {
+                const intensity = this.effectParams.intensity / 100;
+                for (let i = 0; i < data.length; i += 4) {
+                    const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                    const enhancement = brightness > 128 ? 255 : 0;
+                    
+                    data[i] = data[i] + (enhancement - data[i]) * intensity * 0.3;
+                    data[i + 1] = data[i + 1] + (enhancement - data[i + 1]) * intensity;
+                    data[i + 2] = data[i + 2] + (enhancement - data[i + 2]) * intensity * 0.7;
+                }
+            }
+
+            thermalVision(data) {
+                const intensity = this.effectParams.intensity / 100;
+                for (let i = 0; i < data.length; i += 4) {
+                    const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                    const thermal = this.getThermalColor(brightness);
+                    
+                    data[i] = data[i] + (thermal.r - data[i]) * intensity;
+                    data[i + 1] = data[i + 1] + (thermal.g - data[i + 1]) * intensity;
+                    data[i + 2] = data[i + 2] + (thermal.b - data[i + 2]) * intensity;
+                }
+            }
+
+            getThermalColor(brightness) {
+                if (brightness < 64) return { r: 0, g: 0, b: brightness * 4 };
+                if (brightness < 128) return { r: 0, g: (brightness - 64) * 4, b: 255 };
+                if (brightness < 192) return { r: (brightness - 128) * 4, g: 255, b: 255 - (brightness - 128) * 4 };
+                return { r: 255, g: 255 - (brightness - 192) * 4, b: 0 };
+            }
+
+            matrixCode() {
+                const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                const fontSize = 14;
+                const columns = Math.floor(this.canvas.width / fontSize);
+                
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.ctx.fillStyle = '#0f0';
+                this.ctx.font = `${fontSize}px monospace`;
+                
+                for (let i = 0; i < columns; i++) {
+                    if (Math.random() > 0.98) {
+                        const char = chars[Math.floor(Math.random() * chars.length)];
+                        const x = i * fontSize;
+                        const y = Math.random() * this.canvas.height;
+                        this.ctx.fillText(char, x, y);
+                    }
+                }
+            }
+
+            kaleidoscope() {
+                const centerX = this.canvas.width / 2;
+                const centerY = this.canvas.height / 2;
+                const radius = Math.min(centerX, centerY);
+                const segments = 6;
+                const anglePerSegment = (Math.PI * 2) / segments;
+                
+                // Create a temporary canvas with the original image
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = this.canvas.width;
+                tempCanvas.height = this.canvas.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(this.canvas, 0, 0);
+                
+                // Clear the main canvas
+                this.ctx.fillStyle = 'black';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw kaleidoscope segments
+                for (let i = 0; i < segments; i++) {
+                    this.ctx.save();
+                    this.ctx.translate(centerX, centerY);
+                    this.ctx.rotate(i * anglePerSegment);
+                    
+                    // Create triangular clipping mask
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, 0);
+                    this.ctx.lineTo(radius, 0);
+                    this.ctx.lineTo(radius * Math.cos(anglePerSegment), radius * Math.sin(anglePerSegment));
+                    this.ctx.closePath();
+                    this.ctx.clip();
+                    
+                    // Draw the segment (alternating between normal and mirrored)
+                    if (i % 2 === 0) {
+                        this.ctx.drawImage(tempCanvas, -centerX, -centerY);
+                    } else {
+                        this.ctx.scale(-1, 1);
+                        this.ctx.drawImage(tempCanvas, -centerX, -centerY);
+                    }
+                    
+                    this.ctx.restore();
+                }
+            }
+
+            applyConvolution(data, width, height, kernel) {
+                const output = new Uint8ClampedArray(data);
+                const side = Math.round(Math.sqrt(kernel.length));
+                const halfSide = Math.floor(side / 2);
+                
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        let r = 0, g = 0, b = 0;
+                        
+                        for (let cy = 0; cy < side; cy++) {
+                            for (let cx = 0; cx < side; cx++) {
+                                const scy = y + cy - halfSide;
+                                const scx = x + cx - halfSide;
+                                
+                                if (scy >= 0 && scy < height && scx >= 0 && scx < width) {
+                                    const srcOff = (scy * width + scx) * 4;
+                                    const wt = kernel[cy * side + cx];
+                                    r += data[srcOff] * wt;
+                                    g += data[srcOff + 1] * wt;
+                                    b += data[srcOff + 2] * wt;
+                                }
+                            }
+                        }
+                        
+                        const dstOff = (y * width + x) * 4;
+                        output[dstOff] = r;
+                        output[dstOff + 1] = g;
+                        output[dstOff + 2] = b;
+                    }
+                }
+                
+                for (let i = 0; i < data.length; i++) {
+                    data[i] = output[i];
+                }
+            }
+
+            captureFrame() {
+                const link = document.createElement('a');
+                link.download = `camera-effect-${Date.now()}.png`;
+                link.href = this.canvas.toDataURL();
+                link.click();
+            }
+
+            async toggleRecording() {
+                if (!this.isRecording) {
+                    await this.startRecording();
+                } else {
+                    this.stopRecording();
+                }
+            }
+
+            async startRecording() {
+                try {
+                    const canvasStream = this.canvas.captureStream(30);
+                    this.mediaRecorder = new MediaRecorder(canvasStream);
+                    this.recordedChunks = [];
+                    
+                    this.mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            this.recordedChunks.push(event.data);
+                        }
+                    };
+                    
+                    this.mediaRecorder.onstop = () => {
+                        const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `camera-recording-${Date.now()}.webm`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    };
+                    
+                    this.mediaRecorder.start();
+                    this.isRecording = true;
+                    document.getElementById('recordBtn').textContent = 'Stop Recording';
+                    document.getElementById('recordBtn').style.background = 'rgba(255, 0, 0, 0.7)';
+                    
+                } catch (error) {
+                    console.error('Error starting recording:', error);
+                    this.showError('Recording not supported in this browser.');
+                }
+            }
+
+            stopRecording() {
+                if (this.mediaRecorder && this.isRecording) {
+                    this.mediaRecorder.stop();
+                    this.isRecording = false;
+                    document.getElementById('recordBtn').textContent = 'Start Recording';
+                    document.getElementById('recordBtn').style.background = '';
+                }
+            }
+
+            setEffect(effect) {
+                this.currentEffect = effect;
+                document.getElementById('activeEffect').textContent = effect.charAt(0).toUpperCase() + effect.slice(1);
+            }
+
+            updateActiveButton(activeBtn) {
+                document.querySelectorAll('.effect-btn').forEach(btn => btn.classList.remove('active'));
+                activeBtn.classList.add('active');
+            }
+
+            updateUI(cameraActive) {
+                document.getElementById('startBtn').disabled = cameraActive;
+                document.getElementById('stopBtn').disabled = !cameraActive;
+                document.getElementById('captureBtn').disabled = !cameraActive;
+                document.getElementById('recordBtn').disabled = !cameraActive;
+            }
+
+            updateStats() {
+                document.getElementById('resolution').textContent = `${this.canvas.width}x${this.canvas.height}`;
+                
+                const avgProcessingTime = this.processingTimes.length > 0 
+                    ? this.processingTimes.reduce((a, b) => a + b, 0) / this.processingTimes.length
+                    : 0;
+                document.getElementById('processingTime').textContent = `${avgProcessingTime.toFixed(2)}ms`;
+                
+                if (performance.memory) {
+                    const memory = performance.memory;
+                    const used = Math.round(memory.usedJSHeapSize / 1048576);
+                    const total = Math.round(memory.totalJSHeapSize / 1048576);
+                    document.getElementById('memoryUsage').textContent = `${used}MB / ${total}MB`;
+                } else {
+                    document.getElementById('memoryUsage').textContent = 'Not available';
+                }
+            }
+
+            initializePerformanceMonitoring() {
+                setInterval(() => {
+                    const now = performance.now();
+                    const delta = now - this.lastTime;
+                    const fps = Math.round(1000 / delta);
+                    
+                    const fpsCounter = document.getElementById('fpsCounter');
+                    const frameTimeSpan = document.getElementById('frameTime');
+                    
+                    fpsCounter.textContent = fps;
+                    frameTimeSpan.textContent = `${delta.toFixed(1)}ms`;
+                    
+                    // Color code FPS
+                    fpsCounter.className = fps >= 50 ? 'fps-good' : fps >= 30 ? 'fps-medium' : 'fps-poor';
+                    
+                    this.lastTime = now;
+                    this.updateStats();
+                }, 1000);
+            }
+
+            showError(message) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+                errorDiv.textContent = message;
+                document.querySelector('.camera-section').appendChild(errorDiv);
+                
+                setTimeout(() => {
+                    errorDiv.remove();
+                }, 5000);
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            new CameraEffectsPlayground();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case 's':
+                        e.preventDefault();
+                        document.getElementById('captureBtn').click();
+                        break;
+                    case 'r':
+                        e.preventDefault();
+                        document.getElementById('recordBtn').click();
+                        break;
+                }
+            }
+            
+            // Number keys for quick effect switching
+            const effectButtons = document.querySelectorAll('.effect-btn');
+            const keyNumber = parseInt(e.key);
+            if (keyNumber >= 1 && keyNumber <= effectButtons.length) {
+                effectButtons[keyNumber - 1].click();
+            }
+        });
+
+        // Touch gesture support for mobile
+        let touchStartY = 0;
+        let touchStartX = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartY = e.touches[0].clientY;
+            touchStartX = e.touches[0].clientX;
+        });
+
+        document.addEventListener('touchend', (e) => {
+            const touchEndY = e.changedTouches[0].clientY;
+            const touchEndX = e.changedTouches[0].clientX;
+            const deltaY = touchStartY - touchEndY;
+            const deltaX = touchStartX - touchEndX;
+            
+            // Swipe gestures for effect switching
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+                const effectButtons = Array.from(document.querySelectorAll('.effect-btn'));
+                const currentIndex = effectButtons.findIndex(btn => btn.classList.contains('active'));
+                
+                if (deltaX > 0 && currentIndex < effectButtons.length - 1) {
+                    // Swipe left - next effect
+                    effectButtons[currentIndex + 1].click();
+                } else if (deltaX < 0 && currentIndex > 0) {
+                    // Swipe right - previous effect
+                    effectButtons[currentIndex - 1].click();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
