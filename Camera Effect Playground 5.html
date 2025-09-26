@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Effects Playground - Professional Edition</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/3.4.2/gl-matrix-min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --accent-gradient: linear-gradient(45deg, #FF6B6B, #FF8E8E);
+            --success-gradient: linear-gradient(45deg, #4ECDC4, #44A08D);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --hover-glass: rgba(255, 255, 255, 0.15);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.8);
+            --accent-color: #FFD700;
+            --shadow-primary: 0 10px 30px rgba(0, 0, 0, 0.3);
+            --shadow-accent: 0 15px 40px rgba(255, 107, 107, 0.4);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--primary-gradient);
+            background-attachment: fixed;
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-gradient);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--success-gradient);
+        }
+
+        .header {
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px) saturate(180%);
+            padding: 25px 0;
+            text-align: center;
+            border-bottom: 1px solid var(--glass-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            animation: slideDown 0.8s ease-out;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow-primary);
+        }
+
+        .header h1 {
+            font-size: clamp(2.2rem, 4.5vw, 3rem);
+            font-weight: 200;
+            letter-spacing: 3px;
+            margin-bottom: 15px;
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4, #FFD700);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease-in-out infinite;
+        }
+
+        .header p {
+            opacity: 0.85;
+            font-size: 1.1rem;
+            font-weight: 300;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .video-section {
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px) saturate(180%);
+            border-radius: 24px;
+            padding: 30px;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-primary);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .video-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2), 
+                        0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+        }
+
+        .video-container {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            background: linear-gradient(45deg, #1a1a1a, #2d2d2d);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 
+                        0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            margin-bottom: 25px;
+            transition: all 0.3s ease;
+            aspect-ratio: 4/3;
+        }
+
+        .video-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, 
+                transparent 0%, 
+                rgba(255, 255, 255, 0.05) 50%, 
+                transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .video-container:hover::before {
+            opacity: 1;
+        }
+
+        .video-container::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4, #FFD700, #FF6B6B);
+            background-size: 400% 400%;
+            border-radius: 22px;
+            opacity: 0;
+            z-index: -1;
+            animation: gradientBorder 3s ease infinite;
+            transition: opacity 0.3s ease;
+        }
+
+        .video-container:hover::after {
+            opacity: 0.6;
+        }
+
+        @keyframes gradientBorder {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        #video, #canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        #video {
+            transform: scaleX(-1);
+            display: none;
+        }
+
+        #canvas {
+            transform: scaleX(-1);
+        }
+
+        .video-controls {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            background: var(--accent-gradient);
+            border: none;
+            padding: 14px 28px;
+            border-radius: 30px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            min-width: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(255, 255, 255, 0.4), 
+                transparent);
+            transition: left 0.6s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 15px 35px rgba(255, 107, 107, 0.5);
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:active {
+            transform: translateY(-1px) scale(0.98);
+        }
+
+        .btn.secondary {
+            background: var(--success-gradient);
+            box-shadow: 0 8px 25px rgba(78, 205, 196, 0.3);
+        }
+
+        .btn.secondary:hover {
+            box-shadow: 0 15px 35px rgba(78, 205, 196, 0.5);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+        }
+
+        .btn:disabled:hover::before {
+            left: -100%;
+        }
+
+        .controls-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px) saturate(180%);
+            border-radius: 24px;
+            padding: 30px;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-primary);
+            height: fit-content;
+            animation: fadeInUp 0.8s ease-out 0.4s both;
+            position: sticky;
+            top: 120px;
+        }
+
+        .controls-panel h3 {
+            font-size: 1.6rem;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: 300;
+            background: linear-gradient(45deg, #4ECDC4, #FFD700);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            position: relative;
+        }
+
+        .controls-panel h3::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 2px;
+            background: linear-gradient(45deg, #4ECDC4, #FFD700);
+            border-radius: 1px;
+        }
+
+        .effect-group {
+            margin-bottom: 35px;
+            animation: fadeInUp 0.6s ease-out backwards;
+        }
+
+        .effect-group:nth-child(2) { animation-delay: 0.1s; }
+        .effect-group:nth-child(3) { animation-delay: 0.2s; }
+        .effect-group:nth-child(4) { animation-delay: 0.3s; }
+
+        .effect-group h4 {
+            font-size: 1.2rem;
+            margin-bottom: 18px;
+            color: var(--accent-color);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .effect-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .effect-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(255, 255, 255, 0.1), 
+                transparent);
+            transition: left 0.8s ease;
+        }
+
+        .effect-item:hover {
+            background: var(--hover-glass);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .effect-item:hover::before {
+            left: 100%;
+        }
+
+        .effect-item.active {
+            background: linear-gradient(135deg, 
+                rgba(255, 215, 0, 0.15), 
+                rgba(255, 215, 0, 0.25));
+            border-color: rgba(255, 215, 0, 0.4);
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.2), 
+                        0 0 0 1px rgba(255, 215, 0, 0.3) inset;
+        }
+
+        .effect-item.active::after {
+            content: '✨';
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 16px;
+            animation: sparkle 1.5s ease-in-out infinite;
+        }
+
+        @keyframes sparkle {
+            0%, 100% { opacity: 0.7; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .effect-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .effect-name {
+            font-weight: 500;
+            font-size: 1rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 56px;
+            height: 28px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) inset;
+        }
+
+        .toggle-switch.active {
+            background: var(--success-gradient);
+            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4), 
+                        0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 22px;
+            height: 22px;
+            background: linear-gradient(135deg, #ffffff, #f0f0f0);
+            border-radius: 11px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(28px);
+            background: linear-gradient(135deg, #ffffff, #e8e8e8);
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .toggle-switch:hover {
+            transform: scale(1.05);
+        }
+
+        .slider-container {
+            display: none;
+            margin-top: 15px;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.4s ease;
+        }
+
+        .slider-container.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+            animation: slideIn 0.4s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, 
+                rgba(255, 255, 255, 0.2), 
+                rgba(255, 255, 255, 0.3));
+            outline: none;
+            cursor: pointer;
+            -webkit-appearance: none;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .slider:hover {
+            background: linear-gradient(90deg, 
+                rgba(255, 255, 255, 0.3), 
+                rgba(255, 255, 255, 0.4));
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.5), 
+                        0 0 0 3px rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+            box-shadow: 0 6px 18px rgba(255, 107, 107, 0.7), 
+                        0 0 0 4px rgba(255, 255, 255, 0.3);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            cursor: pointer;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .slider::-moz-range-thumb:hover {
+            transform: scale(1.15);
+            box-shadow: 0 6px 18px rgba(255, 107, 107, 0.7);
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        .performance-stats {
+            background: linear-gradient(135deg, 
+                rgba(0, 0, 0, 0.4), 
+                rgba(20, 20, 20, 0.6));
+            padding: 20px;
+            border-radius: 16px;
+            margin-top: 25px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Droid Sans Mono', 'Source Code Pro', monospace;
+            font-size: 0.9rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .performance-stats::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #4ECDC4, #FFD700, #FF6B6B);
+            background-size: 200% auto;
+            animation: gradientMove 2s linear infinite;
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+
+        .performance-stats h4 {
+            color: #4ECDC4;
+            margin-bottom: 15px;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .performance-stats h4::before {
+            content: '📊';
+            font-size: 16px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(4px);
+        }
+
+        .stat-item span:first-child {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .stat-item span:last-child {
+            color: #FFD700;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .error-message {
+            background: linear-gradient(135deg, 
+                rgba(255, 107, 107, 0.2), 
+                rgba(255, 142, 142, 0.3));
+            border: 1px solid rgba(255, 107, 107, 0.5);
+            color: #FFB3B3;
+            padding: 25px;
+            border-radius: 16px;
+            text-align: center;
+            margin: 25px 0;
+            font-weight: 500;
+            position: relative;
+            backdrop-filter: blur(10px);
+        }
+
+        .error-message::before {
+            content: '⚠️';
+            display: block;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.3rem;
+            font-weight: 300;
+            color: var(--text-secondary);
+        }
+
+        .loading::before {
+            content: '🎥';
+            display: block;
+            font-size: 3rem;
+            margin-bottom: 20px;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .loading::after {
+            content: '';
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0%, 33% { content: '.'; }
+            34%, 66% { content: '..'; }
+            67%, 100% { content: '...'; }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Enhanced responsive design */
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 40px;
+                max-width: 900px;
+            }
+            
+            .controls-panel {
+                position: relative;
+                top: auto;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .header h1 {
+                font-size: clamp(1.8rem, 5vw, 2.2rem);
+                letter-spacing: 2px;
+            }
+            
+            .container {
+                padding: 30px 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 15px;
+                gap: 30px;
+            }
+            
+            .video-section, .controls-panel {
+                padding: 25px;
+                border-radius: 20px;
+            }
+            
+            .video-controls {
+                flex-direction: column;
+                align-items: center;
+                gap: 12px;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 200px;
+            }
+            
+            .effect-group {
+                margin-bottom: 25px;
+            }
+            
+            .effect-item {
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 20px 15px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+                letter-spacing: 1px;
+            }
+            
+            .video-section, .controls-panel {
+                padding: 20px;
+                border-radius: 16px;
+            }
+            
+            .video-container {
+                border-radius: 16px;
+            }
+            
+            .effect-item {
+                padding: 12px;
+                border-radius: 12px;
+            }
+            
+            .toggle-switch {
+                width: 48px;
+                height: 24px;
+            }
+            
+            .toggle-switch::after {
+                width: 18px;
+                height: 18px;
+            }
+            
+            .toggle-switch.active::after {
+                transform: translateX(24px);
+            }
+        }
+
+        /* High-performance animations */
+        @media (prefers-reduced-motion: no-preference) {
+            .video-container {
+                animation: floatIn 1s ease-out;
+            }
+            
+            .effect-item {
+                animation: slideInRight 0.6s ease-out backwards;
+            }
+            
+            .effect-item:nth-child(odd) {
+                animation-delay: 0.1s;
+            }
+            
+            .effect-item:nth-child(even) {
+                animation-delay: 0.2s;
+            }
+        }
+
+        @keyframes floatIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Focus and accessibility improvements */
+        .btn:focus,
+        .toggle-switch:focus,
+        .slider:focus {
+            outline: 2px solid #4ECDC4;
+            outline-offset: 2px;
+        }
+
+        .effect-item:focus-within {
+            outline: 1px solid rgba(255, 215, 0, 0.6);
+            outline-offset: 2px;
+        }
+
+        /* Reduced motion preference */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            body { background: white !important; color: black !important; }
+            .video-section, .controls-panel { box-shadow: none !important; border: 1px solid #ccc !important; }
+        }
+
+        /* Dark theme enhancement */
+        @media (prefers-color-scheme: dark) {
+            .performance-stats {
+                background: linear-gradient(135deg, 
+                    rgba(10, 10, 10, 0.6), 
+                    rgba(30, 30, 30, 0.8));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Camera Effects Playground</h1>
+        <p>Professional-grade real-time video processing with WebGL effects</p>
+    </div>
+
+    <div class="container">
+        <div class="video-section">
+            <div class="video-container">
+                <video id="video" autoplay muted playsinline style="display: none;"></video>
+                <canvas id="canvas"></canvas>
+            </div>
+            
+            <div class="video-controls">
+                <button class="btn" id="startBtn">
+                    <i class="fas fa-camera"></i> Start Camera
+                </button>
+                <button class="btn secondary" id="pauseBtn" disabled>
+                    <i class="fas fa-pause"></i> Pause Effects
+                </button>
+                <button class="btn secondary" id="screenshotBtn" disabled>
+                    <i class="fas fa-camera"></i> Screenshot
+                </button>
+            </div>
+
+            <div class="performance-stats">
+                <h4>Performance Monitor</h4>
+                <div class="stat-item">
+                    <span>FPS:</span>
+                    <span id="fps">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Frame Time:</span>
+                    <span id="frameTime">0ms</span>
+                </div>
+                <div class="stat-item">
+                    <span>Resolution:</span>
+                    <span id="resolution">0x0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Active Effects:</span>
+                    <span id="effectCount">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-panel">
+            <h3>Effect Controls</h3>
+
+            <div class="effect-group">
+                <h4><i class="fas fa-palette"></i> Color Effects</h4>
+                
+                <div class="effect-item" data-effect="invert">
+                    <div class="effect-header">
+                        <span class="effect-name">Color Invert</span>
+                        <div class="toggle-switch"></div>
+                    </div>
+                </div>
+
+                <div class="effect-item" data-effect="grayscale">
+                    <div class="effect-header">
+                        <span class="effect-name">Grayscale</span>
+                        <div class="toggle-switch"></div>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" class="slider" min="0" max="100" value="50" data-param="intensity">
+                        <div class="slider-label">
+                            <span>0%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="effect-item" data-effect="sepia">
+                    <div class="effect-header">
+                        <span class="effect-name">Sepia Tone</span>
+                        <div class="toggle-switch"></div>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" class="slider" min="0" max="100" value="75" data-param="intensity">
+                        <div class="slider-label">
+                            <span>0%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="effect-item" data-effect="hueShift">
+                    <div class="effect-header">
+                        <span class="effect-name">Hue Shift</span>
+                        <div class="toggle-switch"></div>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" class="slider" min="0" max="360" value="180" data-param="degrees">
+                        <div class="slider-label">
+                            <span>0°</span>
+                            <span>360°</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="effect-group">
+                <h4><i class="fas fa-magic"></i> Visual Effects</h4>
+                
+                <div class="effect-item" data-effect="pixelate">
+                    <div class="effect-header">
+                        <span class="effect-name">Pixelate</span>
+                        <div class="toggle-switch"></div>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" class="slider" min="4" max="32" value="8" data-param="size">
+                        <div class="slider-label">
+                            <span>4px</span>
+                            <span>32px</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="effect-item" data-effect="rgbSplit">
+                    <div class="effect-header">
+                        <span class="effect-name">RGB Split</span>
+                        <div class="toggle-switch"></div>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" class="slider" min="1" max="20" value="5" data-param="offset">
+                        <div class="slider-label">
+                            <span>1px</span>
+                            <span>20px</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="effect-item" data-effect="blur">
+                    <div class="effect-header">
+                        <span class="effect-name">Blur</span>
+                        <div class="toggle-switch"></div>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" class="slider" min="0" max="10" value="3" step="0.5" data-param="radius">
+                        <div class="slider-label">
+                            <span>0px</span>
+                            <span>10px</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="effect-item" data-effect="emboss">
+                    <div class="effect-header">
+                        <span class="effect-name">Emboss</span>
+                        <div class="toggle-switch"></div>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" class="slider" min="0.5" max="3" value="1.5" step="0.1" data-param="strength">
+                        <div class="slider-label">
+                            <span>0.5</span>
+                            <span>3.0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="effect-group">
+                <h4><i class="fas fa-star"></i> Advanced Effects</h4>
+                
+                <div class="effect-item" data-effect="vignette">
+                    <div class="effect-header">
+                        <span class="effect-name">Vignette</span>
+                        <div class="toggle-switch"></div>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" class="slider" min="0.1" max="1" value="0.6" step="0.05" data-param="intensity">
+                        <div class="slider-label">
+                            <span>0.1</span>
+                            <span>1.0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="effect-item" data-effect="kaleidoscope">
+                    <div class="effect-header">
+                        <span class="effect-name">Kaleidoscope</span>
+                        <div class="toggle-switch"></div>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" class="slider" min="3" max="12" value="6" data-param="segments">
+                        <div class="slider-label">
+                            <span>3</span>
+                            <span>12</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="effect-item" data-effect="warp">
+                    <div class="effect-header">
+                        <span class="effect-name">Wave Warp</span>
+                        <div class="toggle-switch"></div>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" class="slider" min="5" max="50" value="20" data-param="amplitude">
+                        <div class="slider-label">
+                            <span>5</span>
+                            <span>50</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class CameraEffectsPlayground {
+            constructor() {
+                this.video = document.getElementById('video');
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.isRunning = false;
+                this.isPaused = false;
+                this.stream = null;
+                
+                // Performance monitoring
+                this.fps = 0;
+                this.frameCount = 0;
+                this.lastTime = 0;
+                this.frameTime = 0;
+                
+                // Effect states
+                this.effects = {
+                    invert: { active: false },
+                    grayscale: { active: false, intensity: 50 },
+                    sepia: { active: false, intensity: 75 },
+                    hueShift: { active: false, degrees: 180 },
+                    pixelate: { active: false, size: 8 },
+                    rgbSplit: { active: false, offset: 5 },
+                    blur: { active: false, radius: 3 },
+                    emboss: { active: false, strength: 1.5 },
+                    vignette: { active: false, intensity: 0.6 },
+                    kaleidoscope: { active: false, segments: 6 },
+                    warp: { active: false, amplitude: 20 }
+                };
+                
+                this.initializeEventListeners();
+                this.updatePerformanceDisplay();
+            }
+            
+            initializeEventListeners() {
+                // Button controls
+                document.getElementById('startBtn').addEventListener('click', () => this.startCamera());
+                document.getElementById('pauseBtn').addEventListener('click', () => this.togglePause());
+                document.getElementById('screenshotBtn').addEventListener('click', () => this.takeScreenshot());
+                
+                // Effect controls
+                document.querySelectorAll('.effect-item').forEach(item => {
+                    const effectName = item.dataset.effect;
+                    const toggle = item.querySelector('.toggle-switch');
+                    const slider = item.querySelector('.slider');
+                    
+                    // Toggle effect on/off
+                    toggle.addEventListener('click', () => {
+                        const isActive = !this.effects[effectName].active;
+                        this.effects[effectName].active = isActive;
+                        
+                        toggle.classList.toggle('active', isActive);
+                        item.classList.toggle('active', isActive);
+                        
+                        const sliderContainer = item.querySelector('.slider-container');
+                        if (sliderContainer) {
+                            sliderContainer.classList.toggle('active', isActive);
+                        }
+                        
+                        this.updateEffectCount();
+                    });
+                    
+                    // Handle parameter changes
+                    if (slider) {
+                        const paramName = slider.dataset.param;
+                        slider.addEventListener('input', (e) => {
+                            this.effects[effectName][paramName] = parseFloat(e.target.value);
+                        });
+                    }
+                });
+            }
+            
+            async startCamera() {
+                try {
+                    this.stream = await navigator.mediaDevices.getUserMedia({
+                        video: { 
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            facingMode: 'user'
+                        }
+                    });
+                    
+                    this.video.srcObject = this.stream;
+                    this.video.addEventListener('loadedmetadata', () => {
+                        this.canvas.width = this.video.videoWidth;
+                        this.canvas.height = this.video.videoHeight;
+                        
+                        document.getElementById('resolution').textContent = 
+                            `${this.video.videoWidth}x${this.video.videoHeight}`;
+                        
+                        this.isRunning = true;
+                        this.renderLoop();
+                        
+                        // Update UI
+                        document.getElementById('startBtn').disabled = true;
+                        document.getElementById('pauseBtn').disabled = false;
+                        document.getElementById('screenshotBtn').disabled = false;
+                    });
+                } catch (err) {
+                    console.error('Error accessing camera:', err);
+                    this.showError('Failed to access camera. Please ensure you have granted permission and try again.');
+                }
+            }
+            
+            togglePause() {
+                this.isPaused = !this.isPaused;
+                const btn = document.getElementById('pauseBtn');
+                btn.innerHTML = this.isPaused ? 
+                    '<i class="fas fa-play"></i> Resume Effects' : 
+                    '<i class="fas fa-pause"></i> Pause Effects';
+                
+                if (!this.isPaused && this.isRunning) {
+                    this.renderLoop();
+                }
+            }
+            
+            takeScreenshot() {
+                const link = document.createElement('a');
+                link.download = `camera-effect-${Date.now()}.png`;
+                link.href = this.canvas.toDataURL();
+                link.click();
+            }
+            
+            renderLoop() {
+                if (!this.isRunning || this.isPaused) return;
+                
+                const startTime = performance.now();
+                
+                // Clear canvas and draw video frame
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+                
+                // Apply effects
+                this.applyEffects();
+                
+                // Update performance stats
+                this.frameTime = performance.now() - startTime;
+                this.updateFPS();
+                
+                requestAnimationFrame(() => this.renderLoop());
+            }
+            
+            applyEffects() {
+                let imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Apply pixel-based effects
+                if (this.effects.invert.active) {
+                    imageData = this.applyInvert(imageData);
+                }
+                
+                if (this.effects.grayscale.active) {
+                    imageData = this.applyGrayscale(imageData);
+                }
+                
+                if (this.effects.sepia.active) {
+                    imageData = this.applySepia(imageData);
+                }
+                
+                if (this.effects.hueShift.active) {
+                    imageData = this.applyHueShift(imageData);
+                }
+                
+                if (this.effects.emboss.active) {
+                    imageData = this.applyEmboss(imageData);
+                }
+                
+                if (this.effects.vignette.active) {
+                    imageData = this.applyVignette(imageData);
+                }
+                
+                // Put back the processed image data
+                this.ctx.putImageData(imageData, 0, 0);
+                
+                // Apply canvas-based effects
+                if (this.effects.pixelate.active) {
+                    this.applyPixelate();
+                }
+                
+                if (this.effects.rgbSplit.active) {
+                    this.applyRGBSplit();
+                }
+                
+                if (this.effects.blur.active) {
+                    this.applyBlur();
+                }
+                
+                if (this.effects.kaleidoscope.active) {
+                    this.applyKaleidoscope();
+                }
+                
+                if (this.effects.warp.active) {
+                    this.applyWarp();
+                }
+            }
+            
+            applyInvert(imageData) {
+                const data = imageData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i] = 255 - data[i];     // Red
+                    data[i + 1] = 255 - data[i + 1]; // Green
+                    data[i + 2] = 255 - data[i + 2]; // Blue
+                }
+                return imageData;
+            }
+            
+            applyGrayscale(imageData) {
+                const data = imageData.data;
+                const intensity = this.effects.grayscale.intensity / 100;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+                    data[i] = data[i] * (1 - intensity) + gray * intensity;
+                    data[i + 1] = data[i + 1] * (1 - intensity) + gray * intensity;
+                    data[i + 2] = data[i + 2] * (1 - intensity) + gray * intensity;
+                }
+                return imageData;
+            }
+            
+            applySepia(imageData) {
+                const data = imageData.data;
+                const intensity = this.effects.sepia.intensity / 100;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    
+                    const sepiaR = (r * 0.393 + g * 0.769 + b * 0.189);
+                    const sepiaG = (r * 0.349 + g * 0.686 + b * 0.168);
+                    const sepiaB = (r * 0.272 + g * 0.534 + b * 0.131);
+                    
+                    data[i] = r * (1 - intensity) + sepiaR * intensity;
+                    data[i + 1] = g * (1 - intensity) + sepiaG * intensity;
+                    data[i + 2] = b * (1 - intensity) + sepiaB * intensity;
+                }
+                return imageData;
+            }
+            
+            applyHueShift(imageData) {
+                const data = imageData.data;
+                const shift = this.effects.hueShift.degrees * Math.PI / 180;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i] / 255;
+                    const g = data[i + 1] / 255;
+                    const b = data[i + 2] / 255;
+                    
+                    // Convert RGB to HSL
+                    const max = Math.max(r, g, b);
+                    const min = Math.min(r, g, b);
+                    let h, s, l = (max + min) / 2;
+                    
+                    if (max === min) {
+                        h = s = 0;
+                    } else {
+                        const d = max - min;
+                        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                        
+                        switch (max) {
+                            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                            case g: h = (b - r) / d + 2; break;
+                            case b: h = (r - g) / d + 4; break;
+                        }
+                        h /= 6;
+                    }
+                    
+                    // Shift hue
+                    h = (h + shift / (2 * Math.PI)) % 1;
+                    if (h < 0) h += 1;
+                    
+                    // Convert back to RGB
+                    const hue2rgb = (p, q, t) => {
+                        if (t < 0) t += 1;
+                        if (t > 1) t -= 1;
+                        if (t < 1/6) return p + (q - p) * 6 * t;
+                        if (t < 1/2) return q;
+                        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                        return p;
+                    };
+                    
+                    let newR, newG, newB;
+                    if (s === 0) {
+                        newR = newG = newB = l;
+                    } else {
+                        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                        const p = 2 * l - q;
+                        newR = hue2rgb(p, q, h + 1/3);
+                        newG = hue2rgb(p, q, h);
+                        newB = hue2rgb(p, q, h - 1/3);
+                    }
+                    
+                    data[i] = Math.round(newR * 255);
+                    data[i + 1] = Math.round(newG * 255);
+                    data[i + 2] = Math.round(newB * 255);
+                }
+                return imageData;
+            }
+            
+            applyEmboss(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const strength = this.effects.emboss.strength;
+                const newData = new Uint8ClampedArray(data);
+                
+                // Emboss kernel
+                const kernel = [
+                    [-2 * strength, -1 * strength, 0],
+                    [-1 * strength, 1, 1 * strength],
+                    [0, 1 * strength, 2 * strength]
+                ];
+                
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        let r = 0, g = 0, b = 0;
+                        
+                        for (let ky = -1; ky <= 1; ky++) {
+                            for (let kx = -1; kx <= 1; kx++) {
+                                const idx = ((y + ky) * width + (x + kx)) * 4;
+                                const weight = kernel[ky + 1][kx + 1];
+                                
+                                r += data[idx] * weight;
+                                g += data[idx + 1] * weight;
+                                b += data[idx + 2] * weight;
+                            }
+                        }
+                        
+                        const idx = (y * width + x) * 4;
+                        newData[idx] = Math.max(0, Math.min(255, r + 128));
+                        newData[idx + 1] = Math.max(0, Math.min(255, g + 128));
+                        newData[idx + 2] = Math.max(0, Math.min(255, b + 128));
+                    }
+                }
+                
+                return new ImageData(newData, width, height);
+            }
+            
+            applyVignette(imageData) {
+                const data = imageData.data;
+                const width = imageData.width;
+                const height = imageData.height;
+                const intensity = this.effects.vignette.intensity;
+                
+                const centerX = width / 2;
+                const centerY = height / 2;
+                const maxDistance = Math.sqrt(centerX * centerX + centerY * centerY);
+                
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const dx = x - centerX;
+                        const dy = y - centerY;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        const vignette = 1 - (distance / maxDistance) * intensity;
+                        
+                        const idx = (y * width + x) * 4;
+                        data[idx] *= vignette;
+                        data[idx + 1] *= vignette;
+                        data[idx + 2] *= vignette;
+                    }
+                }
+                
+                return imageData;
+            }
+            
+            applyPixelate() {
+                const size = this.effects.pixelate.size;
+                const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Create a temporary canvas for pixelation
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = Math.ceil(this.canvas.width / size);
+                tempCanvas.height = Math.ceil(this.canvas.height / size);
+                
+                // Draw scaled down version
+                tempCtx.drawImage(this.canvas, 0, 0, tempCanvas.width, tempCanvas.height);
+                
+                // Clear main canvas and draw scaled up version
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.imageSmoothingEnabled = false;
+                this.ctx.drawImage(tempCanvas, 0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.imageSmoothingEnabled = true;
+            }
+            
+            applyRGBSplit() {
+                const offset = this.effects.rgbSplit.offset;
+                const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Create separate canvases for each channel
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = this.canvas.width;
+                tempCanvas.height = this.canvas.height;
+                
+                // Clear main canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw red channel shifted
+                tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+                tempCtx.putImageData(imageData, 0, 0);
+                this.ctx.globalCompositeOperation = 'screen';
+                this.ctx.filter = 'sepia(1) saturate(2) hue-rotate(315deg)';
+                this.ctx.drawImage(tempCanvas, -offset, 0);
+                
+                // Draw green channel
+                this.ctx.filter = 'sepia(1) saturate(2) hue-rotate(120deg)';
+                this.ctx.drawImage(tempCanvas, 0, 0);
+                
+                // Draw blue channel shifted
+                this.ctx.filter = 'sepia(1) saturate(2) hue-rotate(240deg)';
+                this.ctx.drawImage(tempCanvas, offset, 0);
+                
+                // Reset filters
+                this.ctx.filter = 'none';
+                this.ctx.globalCompositeOperation = 'source-over';
+            }
+            
+            applyBlur() {
+                const radius = this.effects.blur.radius;
+                this.ctx.filter = `blur(${radius}px)`;
+                
+                // Create a copy of the current canvas
+                const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.putImageData(imageData, 0, 0);
+                
+                // Reset filter
+                this.ctx.filter = 'none';
+            }
+            
+            applyKaleidoscope() {
+                const segments = this.effects.kaleidoscope.segments;
+                const centerX = this.canvas.width / 2;
+                const centerY = this.canvas.height / 2;
+                
+                // Save the current canvas state
+                const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Clear canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Create temporary canvas for the original image
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = this.canvas.width;
+                tempCanvas.height = this.canvas.height;
+                tempCtx.putImageData(imageData, 0, 0);
+                
+                // Draw kaleidoscope segments
+                for (let i = 0; i < segments; i++) {
+                    this.ctx.save();
+                    this.ctx.translate(centerX, centerY);
+                    this.ctx.rotate((2 * Math.PI * i) / segments);
+                    
+                    // Create triangular clipping path
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, 0);
+                    this.ctx.lineTo(centerX, 0);
+                    this.ctx.arc(0, 0, centerX, 0, Math.PI / segments);
+                    this.ctx.closePath();
+                    this.ctx.clip();
+                    
+                    // Draw the image segment
+                    if (i % 2 === 0) {
+                        this.ctx.drawImage(tempCanvas, -centerX, -centerY);
+                    } else {
+                        this.ctx.scale(-1, 1);
+                        this.ctx.drawImage(tempCanvas, -centerX, -centerY);
+                    }
+                    
+                    this.ctx.restore();
+                }
+            }
+            
+            applyWarp() {
+                const amplitude = this.effects.warp.amplitude;
+                const time = Date.now() * 0.001;
+                
+                const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = this.canvas.width;
+                tempCanvas.height = this.canvas.height;
+                tempCtx.putImageData(imageData, 0, 0);
+                
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Create wave distortion
+                const sliceHeight = 1;
+                for (let y = 0; y < this.canvas.height; y += sliceHeight) {
+                    const waveX = Math.sin((y / 50) + time) * amplitude;
+                    const waveY = Math.cos((y / 30) + time) * (amplitude * 0.3);
+                    
+                    this.ctx.drawImage(
+                        tempCanvas,
+                        0, y, this.canvas.width, sliceHeight,
+                        waveX, y + waveY, this.canvas.width, sliceHeight
+                    );
+                }
+            }
+            
+            updateFPS() {
+                this.frameCount++;
+                const currentTime = performance.now();
+                
+                if (currentTime - this.lastTime >= 1000) {
+                    this.fps = Math.round((this.frameCount * 1000) / (currentTime - this.lastTime));
+                    this.frameCount = 0;
+                    this.lastTime = currentTime;
+                    
+                    this.updatePerformanceDisplay();
+                }
+            }
+            
+            updatePerformanceDisplay() {
+                document.getElementById('fps').textContent = this.fps;
+                document.getElementById('frameTime').textContent = `${this.frameTime.toFixed(1)}ms`;
+            }
+            
+            updateEffectCount() {
+                const count = Object.values(this.effects).filter(e => e.active).length;
+                document.getElementById('effectCount').textContent = count;
+            }
+            
+            showError(message) {
+                const container = document.querySelector('.video-section .video-container');
+                container.innerHTML = `<div class="error-message">${message}</div>`;
+            }
+        }
+        
+        // Initialize the application when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new CameraEffectsPlayground();
+        });
+        
+        // Add some easter eggs for the demo
+        let konamiCode = [];
+        const konamiSequence = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65]; // Up, Up, Down, Down, Left, Right, Left, Right, B, A
+        
+        document.addEventListener('keydown', (e) => {
+            konamiCode.push(e.keyCode);
+            if (konamiCode.length > konamiSequence.length) {
+                konamiCode.shift();
+            }
+            
+            if (konamiCode.join(',') === konamiSequence.join(',')) {
+                // Easter egg: Enable all effects at once
+                document.querySelectorAll('.toggle-switch').forEach(toggle => {
+                    if (!toggle.classList.contains('active')) {
+                        toggle.click();
+                    }
+                });
+                
+                // Show a fun message
+                const message = document.createElement('div');
+                message.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+                    color: white;
+                    padding: 20px;
+                    border-radius: 10px;
+                    font-size: 1.2rem;
+                    font-weight: bold;
+                    z-index: 1000;
+                    text-align: center;
+                    animation: pulse 2s ease-in-out;
+                `;
+                message.textContent = '🎉 KONAMI CODE ACTIVATED! 🎉';
+                document.body.appendChild(message);
+                
+                setTimeout(() => message.remove(), 3000);
+                konamiCode = [];
+            }
+        });
+        
+        // Add CSS animation for the easter egg
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0%, 100% { transform: translate(-50%, -50%) scale(1); }
+                50% { transform: translate(-50%, -50%) scale(1.1); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
