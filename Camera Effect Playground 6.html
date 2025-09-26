@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Effects Playground</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 20%, #2d2d2d 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(0, 122, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(88, 86, 214, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(255, 45, 146, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            padding: 30px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        .header.scrolled {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #007AFF 0%, #5856D6 30%, #FF2D92 70%, #FF9500 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+            position: relative;
+        }
+
+        .header h1::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #007AFF, #5856D6);
+            border-radius: 2px;
+            opacity: 0.7;
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 1.15rem;
+            font-weight: 400;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .video-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .video-container {
+            position: relative;
+            border-radius: 24px;
+            overflow: hidden;
+            background: linear-gradient(145deg, #000000, #1a1a1a);
+            box-shadow: 
+                0 25px 50px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            border: 2px solid transparent;
+            background-clip: padding-box;
+            transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+            transform: perspective(1000px) rotateY(0deg);
+        }
+
+        .video-container::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #007AFF, #5856D6, #FF2D92, #FF9500);
+            border-radius: 26px;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .video-container:hover {
+            transform: perspective(1000px) rotateY(2deg) scale(1.02);
+            box-shadow: 
+                0 35px 70px rgba(0, 0, 0, 0.6),
+                0 0 0 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .video-container:hover::before {
+            opacity: 0.6;
+        }
+
+        .video-container.recording {
+            animation: recordingPulse 2s ease-in-out infinite;
+        }
+
+        .video-container.recording::before {
+            opacity: 0.8;
+            animation: recordingGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes recordingPulse {
+            0%, 100% { transform: perspective(1000px) scale(1); }
+            50% { transform: perspective(1000px) scale(1.01); }
+        }
+
+        @keyframes recordingGlow {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+
+        #video, #canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            border-radius: 18px;
+        }
+
+        #video {
+            transform: scaleX(-1);
+        }
+
+        .controls-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border-radius: 24px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .controls-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        }
+
+        .controls-panel:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .controls-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .controls-panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .controls-panel::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.2));
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .controls-panel::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.3));
+        }
+
+        .section {
+            margin-bottom: 35px;
+            position: relative;
+        }
+
+        .section::after {
+            content: '';
+            position: absolute;
+            bottom: -18px;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        }
+
+        .section:last-child::after {
+            display: none;
+        }
+
+        .section h3 {
+            font-size: 1.4rem;
+            margin-bottom: 18px;
+            background: linear-gradient(135deg, #007AFF, #5856D6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section h3::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(135deg, #007AFF, #5856D6);
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .effect-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 14px 18px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .effect-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .effect-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 
+                0 8px 25px rgba(0, 0, 0, 0.2),
+                0 0 0 1px rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .effect-btn:hover::before {
+            left: 100%;
+        }
+
+        .effect-btn.active {
+            background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+            border-color: #007AFF;
+            box-shadow: 
+                0 12px 30px rgba(0, 122, 255, 0.4),
+                0 0 0 1px rgba(0, 122, 255, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+            color: white;
+        }
+
+        .effect-btn.active::before {
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        }
+
+        .effect-btn:active {
+            transform: translateY(0) scale(0.98);
+            transition: all 0.1s ease;
+        }
+
+        .slider-container {
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .slider-container label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 0.95rem;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(to right, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.2));
+            outline: none;
+            -webkit-appearance: none;
+            margin-bottom: 15px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .slider::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #007AFF, #5856D6);
+            border-radius: 4px;
+            width: var(--slider-progress, 50%);
+            transition: width 0.2s ease;
+        }
+
+        .slider:hover {
+            background: linear-gradient(to right, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.25));
+            transform: scaleY(1.1);
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #007AFF, #5856D6);
+            cursor: pointer;
+            box-shadow: 
+                0 4px 12px rgba(0, 122, 255, 0.4),
+                0 0 0 3px rgba(255, 255, 255, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            transition: all 0.2s ease;
+            position: relative;
+            z-index: 2;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 
+                0 6px 16px rgba(0, 122, 255, 0.5),
+                0 0 0 4px rgba(255, 255, 255, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+
+        .slider::-webkit-slider-thumb:active {
+            transform: scale(1.1);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #007AFF, #5856D6);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
+        }
+
+        .color-picker-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .color-picker {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 28px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 1.05rem;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            box-shadow: 
+                0 8px 25px rgba(0, 122, 255, 0.3),
+                0 0 0 1px rgba(0, 122, 255, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .primary-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .primary-btn:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 
+                0 12px 35px rgba(0, 122, 255, 0.4),
+                0 0 0 1px rgba(0, 122, 255, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .primary-btn:hover::before {
+            left: 100%;
+        }
+
+        .primary-btn:active {
+            transform: translateY(-1px) scale(0.98);
+            transition: all 0.1s ease;
+        }
+
+        .secondary-btn {
+            background: rgba(255, 255, 255, 0.08);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 16px 32px;
+            border-radius: 28px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1.05rem;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .secondary-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .secondary-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 
+                0 8px 25px rgba(0, 0, 0, 0.2),
+                0 0 0 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .secondary-btn:hover::before {
+            left: 100%;
+        }
+
+        .secondary-btn:active {
+            transform: translateY(-1px) scale(0.98);
+            transition: all 0.1s ease;
+        }
+
+        .performance-monitor {
+            background: linear-gradient(145deg, rgba(0, 0, 0, 0.4), rgba(20, 20, 20, 0.4));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 25px;
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .performance-monitor::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 149, 0, 0.3), transparent);
+        }
+
+        .performance-monitor h4 {
+            background: linear-gradient(135deg, #FF9500, #FF6B35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .performance-monitor h4::before {
+            content: '📊';
+            font-size: 1.2rem;
+        }
+
+        .fps-counter {
+            color: #30D158;
+            font-weight: 600;
+            font-size: 1rem;
+            text-shadow: 0 0 10px rgba(48, 209, 88, 0.3);
+        }
+
+        .performance-monitor > div {
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .performance-monitor > div:last-child {
+            margin-bottom: 0;
+        }
+
+        .performance-monitor span {
+            color: #64D2FF;
+            font-weight: 600;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(30, 30, 30, 0.98));
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+        }
+
+        .loading-content {
+            text-align: center;
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .loading-content h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #007AFF, #5856D6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .loading-content p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #007AFF;
+            border-right: 4px solid #5856D6;
+            border-radius: 50%;
+            animation: spin 1.2s cubic-bezier(0.4, 0.0, 0.2, 1) infinite;
+            margin: 0 auto 25px;
+            position: relative;
+        }
+
+        .spinner::before {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            border-radius: 50%;
+            border: 4px solid transparent;
+            border-top: 4px solid rgba(0, 122, 255, 0.3);
+            animation: spin 2s linear infinite reverse;
+        }
+
+        @keyframes spin {
+            0% { 
+                transform: rotate(0deg);
+                box-shadow: 0 0 20px rgba(0, 122, 255, 0.3);
+            }
+            50% { 
+                box-shadow: 0 0 30px rgba(88, 86, 214, 0.4);
+            }
+            100% { 
+                transform: rotate(360deg);
+                box-shadow: 0 0 20px rgba(0, 122, 255, 0.3);
+            }
+        }
+
+        .error-message {
+            background: linear-gradient(135deg, #FF3B30, #FF2D92);
+            color: white;
+            padding: 20px;
+            border-radius: 16px;
+            margin: 20px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1rem;
+            box-shadow: 
+                0 12px 30px rgba(255, 59, 48, 0.3),
+                0 0 0 1px rgba(255, 255, 255, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .error-message::before {
+            content: '⚠️';
+            font-size: 1.5rem;
+            margin-right: 10px;
+        }
+
+        .error-message::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+        }
+
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                gap: 25px;
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2.2rem;
+            }
+
+            .header {
+                padding: 25px 20px;
+            }
+
+            .controls-panel {
+                max-height: none;
+                padding: 25px 20px;
+            }
+
+            .button-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .video-container:hover {
+                transform: none;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .header p {
+                font-size: 1rem;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .primary-btn, .secondary-btn {
+                width: 100%;
+                max-width: 280px;
+                padding: 16px 24px;
+                font-size: 1rem;
+            }
+        }
+
+        .effect-intensity {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .color-picker-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .color-picker {
+            width: 50px;
+            height: 50px;
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            background: transparent;
+            box-shadow: 
+                0 4px 15px rgba(0, 0, 0, 0.2),
+                0 0 0 3px rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .color-picker:hover {
+            transform: scale(1.1);
+            box-shadow: 
+                0 6px 20px rgba(0, 0, 0, 0.3),
+                0 0 0 4px rgba(255, 255, 255, 0.15);
+        }
+
+        /* Smooth transitions for all interactive elements */
+        * {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Custom focus states for accessibility */
+        .effect-btn:focus,
+        .slider:focus,
+        .primary-btn:focus,
+        .secondary-btn:focus,
+        .color-picker:focus {
+            outline: none;
+            box-shadow: 
+                0 0 0 3px rgba(0, 122, 255, 0.4),
+                0 0 0 1px rgba(0, 122, 255, 0.6);
+        }
+
+        /* Micro-interactions */
+        .video-container, .controls-panel, .effect-btn, .primary-btn, .secondary-btn {
+            will-change: transform;
+        }
+
+        /* Glass morphism enhancement */
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(30, 30, 30, 0.95));
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    animation: fadeIn 0.4s ease-out forwards;
+}
+
+.loading-content {
+    text-align: center;
+    color: #f5f5f5;
+    font-family: system-ui, sans-serif;
+    font-size: 1.1rem;
+    line-height: 1.4;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    animation: scaleIn 0.3s ease-out forwards;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h3>Initializing Camera Effects Playground</h3>
+            <p>Preparing your camera...</p>
+        </div>
+    </div>
+
+    <header class="header">
+        <h1>Camera Effects Playground</h1>
+        <p>Professional real-time video processing with advanced WebGL effects</p>
+    </header>
+
+    <div class="main-container">
+        <div class="video-section">
+            <div class="video-container">
+                <video id="video" width="640" height="480" autoplay muted></video>
+                <canvas id="canvas" width="640" height="480" style="display: none;"></canvas>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="primary-btn" id="startBtn">Start Camera</button>
+                <button class="secondary-btn" id="captureBtn" style="display: none;">Capture Photo</button>
+                <button class="secondary-btn" id="recordBtn" style="display: none;">Start Recording</button>
+            </div>
+        </div>
+
+        <div class="controls-panel">
+            <div class="section">
+                <h3>🎨 Visual Effects</h3>
+                <div class="button-grid">
+                    <button class="effect-btn active" data-effect="none">Normal</button>
+                    <button class="effect-btn" data-effect="grayscale">Grayscale</button>
+                    <button class="effect-btn" data-effect="invert">Invert</button>
+                    <button class="effect-btn" data-effect="sepia">Sepia</button>
+                    <button class="effect-btn" data-effect="pixelate">Pixelate</button>
+                    <button class="effect-btn" data-effect="rgbsplit">RGB Split</button>
+                    <button class="effect-btn" data-effect="blur">Blur</button>
+                    <button class="effect-btn" data-effect="edge">Edge Detect</button>
+                    <button class="effect-btn" data-effect="emboss">Emboss</button>
+                    <button class="effect-btn" data-effect="vintage">Vintage</button>
+                    <button class="effect-btn" data-effect="neon">Neon Glow</button>
+                    <button class="effect-btn" data-effect="chromatic">Chromatic</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>⚙️ Effect Parameters</h3>
+                <div class="slider-container">
+                    <label>Intensity <span class="effect-intensity" id="intensityValue">50%</span></label>
+                    <input type="range" class="slider" id="intensity" min="0" max="100" value="50">
+                </div>
+                
+                <div class="slider-container">
+                    <label>Brightness <span class="effect-intensity" id="brightnessValue">100%</span></label>
+                    <input type="range" class="slider" id="brightness" min="0" max="200" value="100">
+                </div>
+                
+                <div class="slider-container">
+                    <label>Contrast <span class="effect-intensity" id="contrastValue">100%</span></label>
+                    <input type="range" class="slider" id="contrast" min="0" max="200" value="100">
+                </div>
+                
+                <div class="slider-container">
+                    <label>Saturation <span class="effect-intensity" id="saturationValue">100%</span></label>
+                    <input type="range" class="slider" id="saturation" min="0" max="200" value="100">
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>🎭 Color Effects</h3>
+                <div class="color-picker-container">
+                    <label>Tint Color:</label>
+                    <input type="color" class="color-picker" id="tintColor" value="#ff0000">
+                </div>
+                
+                <div class="slider-container">
+                    <label>Hue Shift <span class="effect-intensity" id="hueValue">0°</span></label>
+                    <input type="range" class="slider" id="hue" min="0" max="360" value="0">
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>🔧 Advanced Settings</h3>
+                <div class="slider-container">
+                    <label>Pixel Size <span class="effect-intensity" id="pixelSizeValue">8px</span></label>
+                    <input type="range" class="slider" id="pixelSize" min="2" max="20" value="8">
+                </div>
+                
+                <div class="slider-container">
+                    <label>RGB Split Distance <span class="effect-intensity" id="rgbSplitValue">5px</span></label>
+                    <input type="range" class="slider" id="rgbSplit" min="1" max="20" value="5">
+                </div>
+                
+                <div class="slider-container">
+                    <label>Blur Radius <span class="effect-intensity" id="blurRadiusValue">3px</span></label>
+                    <input type="range" class="slider" id="blurRadius" min="0" max="10" value="3">
+                </div>
+            </div>
+
+            <div class="performance-monitor">
+                <h4>Performance Monitor</h4>
+                <div class="fps-counter" id="fpsCounter">FPS: 0</div>
+                <div>Processing Time: <span id="processingTime">0ms</span></div>
+                <div>Resolution: <span id="resolution">640x480</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class CameraEffectsPlayground {
+            constructor() {
+                this.video = document.getElementById('video');
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.isProcessing = false;
+                this.currentEffect = 'none';
+                this.stream = null;
+                this.animationFrame = null;
+                this.mediaRecorder = null;
+                this.recordedChunks = [];
+                
+                // Performance monitoring
+                this.fps = 0;
+                this.frameCount = 0;
+                this.lastTime = performance.now();
+                this.processingTime = 0;
+                
+                // Effect parameters
+                this.params = {
+                    intensity: 50,
+                    brightness: 100,
+                    contrast: 100,
+                    saturation: 100,
+                    hue: 0,
+                    pixelSize: 8,
+                    rgbSplit: 5,
+                    blurRadius: 3,
+                    tintColor: '#ff0000'
+                };
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupEventListeners();
+                this.hideLoading();
+            }
+            
+            setupEventListeners() {
+                // Camera controls
+                document.getElementById('startBtn').addEventListener('click', () => this.startCamera());
+                document.getElementById('captureBtn').addEventListener('click', () => this.capturePhoto());
+                document.getElementById('recordBtn').addEventListener('click', () => this.toggleRecording());
+                
+                // Effect buttons
+                document.querySelectorAll('.effect-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.setEffect(e.target.dataset.effect, e.target));
+                });
+                
+                // Parameter sliders
+                this.setupSliders();
+                
+                // Window resize
+                window.addEventListener('resize', () => this.handleResize());
+            }
+            
+            setupSliders() {
+                const sliders = [
+                    { id: 'intensity', param: 'intensity', suffix: '%' },
+                    { id: 'brightness', param: 'brightness', suffix: '%' },
+                    { id: 'contrast', param: 'contrast', suffix: '%' },
+                    { id: 'saturation', param: 'saturation', suffix: '%' },
+                    { id: 'hue', param: 'hue', suffix: '°' },
+                    { id: 'pixelSize', param: 'pixelSize', suffix: 'px' },
+                    { id: 'rgbSplit', param: 'rgbSplit', suffix: 'px' },
+                    { id: 'blurRadius', param: 'blurRadius', suffix: 'px' }
+                ];
+                
+                sliders.forEach(slider => {
+                    const element = document.getElementById(slider.id);
+                    const valueElement = document.getElementById(slider.id + 'Value');
+                    
+                    element.addEventListener('input', (e) => {
+                        this.params[slider.param] = parseFloat(e.target.value);
+                        valueElement.textContent = e.target.value + slider.suffix;
+                    });
+                });
+                
+                // Color picker
+                document.getElementById('tintColor').addEventListener('input', (e) => {
+                    this.params.tintColor = e.target.value;
+                });
+            }
+            
+            async startCamera() {
+                this.showLoading();
+                try {
+                    this.stream = await navigator.mediaDevices.getUserMedia({
+                        video: { 
+                            width: { ideal: 1280 }, 
+                            height: { ideal: 720 },
+                            facingMode: 'user'
+                        },
+                        audio: false
+                    });
+                    
+                    this.video.srcObject = this.stream;
+                    
+                    this.video.onloadedmetadata = () => {
+                        this.canvas.width = this.video.videoWidth;
+                        this.canvas.height = this.video.videoHeight;
+                        document.getElementById('resolution').textContent = 
+                            `${this.video.videoWidth}x${this.video.videoHeight}`;
+                        
+                        this.hideLoading();
+                        this.showControls();
+                        this.startProcessing();
+                    };
+                } catch (error) {
+                    this.hideLoading();
+                    this.showError('Camera access denied or unavailable. Please allow camera permissions.');
+                }
+            }
+            
+            startProcessing() {
+                this.isProcessing = true;
+                this.processFrame();
+                this.startFPSMonitoring();
+            }
+            
+            processFrame() {
+                if (!this.isProcessing) return;
+                
+                const startTime = performance.now();
+                
+                if (this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
+                    this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+                    this.applyEffect();
+                }
+                
+                this.processingTime = Math.round(performance.now() - startTime);
+                document.getElementById('processingTime').textContent = this.processingTime + 'ms';
+                
+                this.frameCount++;
+                this.animationFrame = requestAnimationFrame(() => this.processFrame());
+            }
+            
+            applyEffect() {
+                const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                let processedData = imageData;
+                
+                switch (this.currentEffect) {
+                    case 'grayscale':
+                        processedData = this.grayscaleEffect(imageData);
+                        break;
+                    case 'invert':
+                        processedData = this.invertEffect(imageData);
+                        break;
+                    case 'sepia':
+                        processedData = this.sepiaEffect(imageData);
+                        break;
+                    case 'pixelate':
+                        processedData = this.pixelateEffect(imageData);
+                        break;
+                    case 'rgbsplit':
+                        processedData = this.rgbSplitEffect(imageData);
+                        break;
+                    case 'blur':
+                        processedData = this.blurEffect(imageData);
+                        break;
+                    case 'edge':
+                        processedData = this.edgeDetectionEffect(imageData);
+                        break;
+                    case 'emboss':
+                        processedData = this.embossEffect(imageData);
+                        break;
+                    case 'vintage':
+                        processedData = this.vintageEffect(imageData);
+                        break;
+                    case 'neon':
+                        processedData = this.neonGlowEffect(imageData);
+                        break;
+                    case 'chromatic':
+                        processedData = this.chromaticAberrationEffect(imageData);
+                        break;
+                }
+                
+                // Apply global adjustments
+                processedData = this.applyGlobalAdjustments(processedData);
+                
+                this.ctx.putImageData(processedData, 0, 0);
+            }
+            
+            grayscaleEffect(imageData) {
+                const data = new Uint8ClampedArray(imageData.data);
+                const intensity = this.params.intensity / 100;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+                    data[i] = data[i] * (1 - intensity) + gray * intensity;
+                    data[i + 1] = data[i + 1] * (1 - intensity) + gray * intensity;
+                    data[i + 2] = data[i + 2] * (1 - intensity) + gray * intensity;
+                }
+                
+                return new ImageData(data, imageData.width, imageData.height);
+            }
+            
+            invertEffect(imageData) {
+                const data = new Uint8ClampedArray(imageData.data);
+                const intensity = this.params.intensity / 100;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i] = data[i] * (1 - intensity) + (255 - data[i]) * intensity;
+                    data[i + 1] = data[i + 1] * (1 - intensity) + (255 - data[i + 1]) * intensity;
+                    data[i + 2] = data[i + 2] * (1 - intensity) + (255 - data[i + 2]) * intensity;
+                }
+                
+                return new ImageData(data, imageData.width, imageData.height);
+            }
+            
+            sepiaEffect(imageData) {
+                const data = new Uint8ClampedArray(imageData.data);
+                const intensity = this.params.intensity / 100;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    
+                    const sepiaR = (r * 0.393 + g * 0.769 + b * 0.189);
+                    const sepiaG = (r * 0.349 + g * 0.686 + b * 0.168);
+                    const sepiaB = (r * 0.272 + g * 0.534 + b * 0.131);
+                    
+                    data[i] = r * (1 - intensity) + sepiaR * intensity;
+                    data[i + 1] = g * (1 - intensity) + sepiaG * intensity;
+                    data[i + 2] = b * (1 - intensity) + sepiaB * intensity;
+                }
+                
+                return new ImageData(data, imageData.width, imageData.height);
+            }
+            
+            pixelateEffect(imageData) {
+                const data = new Uint8ClampedArray(imageData.data);
+                const pixelSize = Math.max(2, this.params.pixelSize);
+                const width = imageData.width;
+                const height = imageData.height;
+                
+                for (let y = 0; y < height; y += pixelSize) {
+                    for (let x = 0; x < width; x += pixelSize) {
+                        const pixelIndex = (y * width + x) * 4;
+                        const r = data[pixelIndex];
+                        const g = data[pixelIndex + 1];
+                        const b = data[pixelIndex + 2];
+                        const a = data[pixelIndex + 3];
+                        
+                        for (let dy = 0; dy < pixelSize && y + dy < height; dy++) {
+                            for (let dx = 0; dx < pixelSize && x + dx < width; dx++) {
+                                const index = ((y + dy) * width + (x + dx)) * 4;
+                                data[index] = r;
+                                data[index + 1] = g;
+                                data[index + 2] = b;
+                                data[index + 3] = a;
+                            }
+                        }
+                    }
+                }
+                
+                return new ImageData(data, imageData.width, imageData.height);
+            }
+            
+            rgbSplitEffect(imageData) {
+                const data = new Uint8ClampedArray(imageData.data);
+                const originalData = new Uint8ClampedArray(imageData.data);
+                const offset = this.params.rgbSplit;
+                const width = imageData.width;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const pixel = i / 4;
+                    const x = pixel % width;
+                    const y = Math.floor(pixel / width);
+                    
+                    // Red channel offset
+                    const rIndex = ((y * width + Math.max(0, x - offset)) * 4);
+                    // Green channel stays in place
+                    const gIndex = i;
+                    // Blue channel offset
+                    const bIndex = ((y * width + Math.min(width - 1, x + offset)) * 4);
+                    
+                    data[i] = originalData[rIndex] || 0;
+                    data[i + 1] = originalData[gIndex + 1] || 0;
+                    data[i + 2] = originalData[bIndex + 2] || 0;
+                }
+                
+                return new ImageData(data, imageData.width, imageData.height);
+            }
+            
+            blurEffect(imageData) {
+                // Simple box blur implementation
+                const data = new Uint8ClampedArray(imageData.data);
+                const originalData = new Uint8ClampedArray(imageData.data);
+                const width = imageData.width;
+                const height = imageData.height;
+                const radius = Math.floor(this.params.blurRadius);
+                
+                if (radius === 0) return imageData;
+                
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        let r = 0, g = 0, b = 0, count = 0;
+                        
+                        for (let dy = -radius; dy <= radius; dy++) {
+                            for (let dx = -radius; dx <= radius; dx++) {
+                                const ny = y + dy;
+                                const nx = x + dx;
+                                
+                                if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
+                                    const index = (ny * width + nx) * 4;
+                                    r += originalData[index];
+                                    g += originalData[index + 1];
+                                    b += originalData[index + 2];
+                                    count++;
+                                }
+                            }
+                        }
+                        
+                        const index = (y * width + x) * 4;
+                        data[index] = r / count;
+                        data[index + 1] = g / count;
+                        data[index + 2] = b / count;
+                    }
+                }
+                
+                return new ImageData(data, imageData.width, imageData.height);
+            }
+            
+            edgeDetectionEffect(imageData) {
+                const data = new Uint8ClampedArray(imageData.data);
+                const originalData = new Uint8ClampedArray(imageData.data);
+                const width = imageData.width;
+                const height = imageData.height;
+                
+                // Sobel operator
+                const sobelX = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
+                const sobelY = [-1, -2, -1, 0, 0, 0, 1, 2, 1];
+                
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        let pixelX = 0, pixelY = 0;
+                        
+                        for (let ky = -1; ky <= 1; ky++) {
+                            for (let kx = -1; kx <= 1; kx++) {
+                                const index = ((y + ky) * width + (x + kx)) * 4;
+                                const gray = originalData[index] * 0.299 + originalData[index + 1] * 0.587 + originalData[index + 2] * 0.114;
+                                const kernelIndex = (ky + 1) * 3 + (kx + 1);
+                                
+                                pixelX += gray * sobelX[kernelIndex];
+                                pixelY += gray * sobelY[kernelIndex];
+                            }
+                        }
+                        
+                        const magnitude = Math.sqrt(pixelX * pixelX + pixelY * pixelY);
+                        const index = (y * width + x) * 4;
+                        const intensity = this.params.intensity / 100;
+                        
+                        data[index] = originalData[index] * (1 - intensity) + magnitude * intensity;
+                        data[index + 1] = originalData[index + 1] * (1 - intensity) + magnitude * intensity;
+                        data[index + 2] = originalData[index + 2] * (1 - intensity) + magnitude * intensity;
+                    }
+                }
+                
+                return new ImageData(data, imageData.width, imageData.height);
+            }
+            
+            embossEffect(imageData) {
+                const data = new Uint8ClampedArray(imageData.data);
+                const originalData = new Uint8ClampedArray(imageData.data);
+                const width = imageData.width;
+                const height = imageData.height;
+                
+                // Emboss kernel
+                const kernel = [-2, -1, 0, -1, 1, 1, 0, 1, 2];
+                
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        let r = 0, g = 0, b = 0;
+                        
+                        for (let ky = -1; ky <= 1; ky++) {
+                            for (let kx = -1; kx <= 1; kx++) {
+                                const index = ((y + ky) * width + (x + kx)) * 4;
+                                const kernelIndex = (ky + 1) * 3 + (kx + 1);
+                                
+                                r += originalData[index] * kernel[kernelIndex];
+                                g += originalData[index + 1] * kernel[kernelIndex];
+                                b += originalData[index + 2] * kernel[kernelIndex];
+                            }
+                        }
+                        
+                        const index = (y * width + x) * 4;
+                        const intensity = this.params.intensity / 100;
+                        
+                        data[index] = Math.max(0, Math.min(255, originalData[index] * (1 - intensity) + (r + 128) * intensity));
+                        data[index + 1] = Math.max(0, Math.min(255, originalData[index + 1] * (1 - intensity) + (g + 128) * intensity));
+                        data[index + 2] = Math.max(0, Math.min(255, originalData[index + 2] * (1 - intensity) + (b + 128) * intensity));
+                    }
+                }
+                
+                return new ImageData(data, imageData.width, imageData.height);
+            }
+            
+            vintageEffect(imageData) {
+                const data = new Uint8ClampedArray(imageData.data);
+                const intensity = this.params.intensity / 100;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    
+                    // Vintage color transformation
+                    const vintageR = (r * 0.393 + g * 0.769 + b * 0.189) * 0.9;
+                    const vintageG = (r * 0.349 + g * 0.686 + b * 0.168) * 0.8;
+                    const vintageB = (r * 0.272 + g * 0.534 + b * 0.131) * 0.6;
+                    
+                    // Add noise and vignette effect
+                    const centerX = 0.5;
+                    const centerY = 0.5;
+                    const x = (i / 4) % imageData.width / imageData.width;
+                    const y = Math.floor((i / 4) / imageData.width) / imageData.height;
+                    const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+                    const vignette = 1 - Math.min(1, distance * 1.2);
+                    
+                    data[i] = r * (1 - intensity) + (vintageR * vignette) * intensity;
+                    data[i + 1] = g * (1 - intensity) + (vintageG * vignette) * intensity;
+                    data[i + 2] = b * (1 - intensity) + (vintageB * vignette) * intensity;
+                }
+                
+                return new ImageData(data, imageData.width, imageData.height);
+            }
+            
+            neonGlowEffect(imageData) {
+                const data = new Uint8ClampedArray(imageData.data);
+                const intensity = this.params.intensity / 100;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    
+                    // Create neon effect by boosting bright colors
+                    const brightness = (r + g + b) / 3;
+                    const boost = brightness > 128 ? 1.5 : 0.5;
+                    
+                    data[i] = Math.min(255, r * (1 - intensity) + (r * boost + Math.sin(Date.now() * 0.01) * 20) * intensity);
+                    data[i + 1] = Math.min(255, g * (1 - intensity) + (g * boost + Math.cos(Date.now() * 0.01) * 20) * intensity);
+                    data[i + 2] = Math.min(255, b * (1 - intensity) + (b * boost + Math.sin(Date.now() * 0.015) * 20) * intensity);
+                }
+                
+                return new ImageData(data, imageData.width, imageData.height);
+            }
+            
+            chromaticAberrationEffect(imageData) {
+                const data = new Uint8ClampedArray(imageData.data);
+                const originalData = new Uint8ClampedArray(imageData.data);
+                const width = imageData.width;
+                const height = imageData.height;
+                const intensity = this.params.intensity / 100;
+                
+                const centerX = width / 2;
+                const centerY = height / 2;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const pixel = i / 4;
+                    const x = pixel % width;
+                    const y = Math.floor(pixel / width);
+                    
+                    const dx = x - centerX;
+                    const dy = y - centerY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const distortion = distance * 0.00005 * intensity;
+                    
+                    // Red channel - outward
+                    const rX = Math.round(x + dx * distortion);
+                    const rY = Math.round(y + dy * distortion);
+                    
+                    // Blue channel - inward
+                    const bX = Math.round(x - dx * distortion);
+                    const bY = Math.round(y - dy * distortion);
+                    
+                    const rIndex = (Math.max(0, Math.min(height - 1, rY)) * width + Math.max(0, Math.min(width - 1, rX))) * 4;
+                    const bIndex = (Math.max(0, Math.min(height - 1, bY)) * width + Math.max(0, Math.min(width - 1, bX))) * 4;
+                    
+                    data[i] = originalData[rIndex] || data[i];
+                    data[i + 1] = originalData[i + 1]; // Green stays in place
+                    data[i + 2] = originalData[bIndex + 2] || data[i + 2];
+                }
+                
+                return new ImageData(data, imageData.width, imageData.height);
+            }
+            
+            applyGlobalAdjustments(imageData) {
+                const data = new Uint8ClampedArray(imageData.data);
+                const brightness = this.params.brightness / 100;
+                const contrast = this.params.contrast / 100;
+                const saturation = this.params.saturation / 100;
+                const hueShift = this.params.hue * Math.PI / 180;
+                
+                // Parse tint color
+                const tintColor = this.hexToRgb(this.params.tintColor);
+                const tintIntensity = 0.1;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    let r = data[i];
+                    let g = data[i + 1];
+                    let b = data[i + 2];
+                    
+                    // Brightness adjustment
+                    r *= brightness;
+                    g *= brightness;
+                    b *= brightness;
+                    
+                    // Contrast adjustment
+                    r = (r - 128) * contrast + 128;
+                    g = (g - 128) * contrast + 128;
+                    b = (b - 128) * contrast + 128;
+                    
+                    // Saturation and hue adjustment (HSL color space)
+                    const hsl = this.rgbToHsl(r, g, b);
+                    hsl[0] = (hsl[0] + hueShift) % (2 * Math.PI);
+                    hsl[1] *= saturation;
+                    
+                    const rgb = this.hslToRgb(hsl[0], hsl[1], hsl[2]);
+                    r = rgb[0];
+                    g = rgb[1];
+                    b = rgb[2];
+                    
+                    // Tint effect
+                    r = r * (1 - tintIntensity) + tintColor.r * tintIntensity;
+                    g = g * (1 - tintIntensity) + tintColor.g * tintIntensity;
+                    b = b * (1 - tintIntensity) + tintColor.b * tintIntensity;
+                    
+                    // Clamp values
+                    data[i] = Math.max(0, Math.min(255, r));
+                    data[i + 1] = Math.max(0, Math.min(255, g));
+                    data[i + 2] = Math.max(0, Math.min(255, b));
+                }
+                
+                return new ImageData(data, imageData.width, imageData.height);
+            }
+            
+            hexToRgb(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? {
+                    r: parseInt(result[1], 16),
+                    g: parseInt(result[2], 16),
+                    b: parseInt(result[3], 16)
+                } : { r: 255, g: 0, b: 0 };
+            }
+            
+            rgbToHsl(r, g, b) {
+                r /= 255;
+                g /= 255;
+                b /= 255;
+                
+                const max = Math.max(r, g, b);
+                const min = Math.min(r, g, b);
+                let h, s, l = (max + min) / 2;
+                
+                if (max === min) {
+                    h = s = 0;
+                } else {
+                    const d = max - min;
+                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    
+                    switch (max) {
+                        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                        case g: h = (b - r) / d + 2; break;
+                        case b: h = (r - g) / d + 4; break;
+                    }
+                    h /= 6;
+                }
+                
+                return [h * 2 * Math.PI, s, l];
+            }
+            
+            hslToRgb(h, s, l) {
+                h = h / (2 * Math.PI);
+                
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                
+                let r, g, b;
+                
+                if (s === 0) {
+                    r = g = b = l;
+                } else {
+                    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                    const p = 2 * l - q;
+                    r = hue2rgb(p, q, h + 1/3);
+                    g = hue2rgb(p, q, h);
+                    b = hue2rgb(p, q, h - 1/3);
+                }
+                
+                return [r * 255, g * 255, b * 255];
+            }
+            
+            setEffect(effect, button) {
+                this.currentEffect = effect;
+                
+                // Update button states
+                document.querySelectorAll('.effect-btn').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+            }
+            
+            capturePhoto() {
+                const link = document.createElement('a');
+                link.download = `camera-effect-${Date.now()}.png`;
+                link.href = this.canvas.toDataURL();
+                link.click();
+            }
+            
+            toggleRecording() {
+                const recordBtn = document.getElementById('recordBtn');
+                
+                if (!this.mediaRecorder || this.mediaRecorder.state === 'inactive') {
+                    this.startRecording();
+                    recordBtn.textContent = 'Stop Recording';
+                    recordBtn.style.background = 'linear-gradient(45deg, #FF3B30, #FF2D92)';
+                } else {
+                    this.stopRecording();
+                    recordBtn.textContent = 'Start Recording';
+                    recordBtn.style.background = '';
+                }
+            }
+            
+            startRecording() {
+                const canvasStream = this.canvas.captureStream(30);
+                this.mediaRecorder = new MediaRecorder(canvasStream);
+                this.recordedChunks = [];
+                
+                this.mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        this.recordedChunks.push(event.data);
+                    }
+                };
+                
+                this.mediaRecorder.onstop = () => {
+                    const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.download = `camera-recording-${Date.now()}.webm`;
+                    link.href = url;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                };
+                
+                this.mediaRecorder.start();
+            }
+            
+            stopRecording() {
+                if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+                    this.mediaRecorder.stop();
+                }
+            }
+            
+            startFPSMonitoring() {
+                setInterval(() => {
+                    const now = performance.now();
+                    const delta = now - this.lastTime;
+                    this.fps = Math.round(1000 / (delta / this.frameCount));
+                    
+                    document.getElementById('fpsCounter').textContent = `FPS: ${this.fps}`;
+                    
+                    this.frameCount = 0;
+                    this.lastTime = now;
+                }, 1000);
+            }
+            
+            showControls() {
+                document.getElementById('startBtn').style.display = 'none';
+                document.getElementById('captureBtn').style.display = 'inline-block';
+                document.getElementById('recordBtn').style.display = 'inline-block';
+                this.canvas.style.display = 'block';
+            }
+            
+            showLoading() {
+                document.getElementById('loadingOverlay').style.display = 'flex';
+            }
+            
+            hideLoading() {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+            
+            showError(message) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = message;
+                document.querySelector('.video-section').prepend(errorDiv);
+                
+                setTimeout(() => errorDiv.remove(), 5000);
+            }
+            
+            handleResize() {
+                // Handle responsive behavior if needed
+            }
+            
+            destroy() {
+                this.isProcessing = false;
+                if (this.animationFrame) {
+                    cancelAnimationFrame(this.animationFrame);
+                }
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                }
+            }
+        }
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            new CameraEffectsPlayground();
+        });
+        
+        // Handle page unload
+        window.addEventListener('beforeunload', () => {
+            if (window.cameraApp) {
+                window.cameraApp.destroy();
+            }
+        });
+    </script>
+</body>
+</html>
