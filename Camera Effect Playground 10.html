@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Effects Playground - Professional Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .header h1 {
+            font-size: clamp(2em, 4vw, 3.5em);
+            font-weight: 800;
+            margin-bottom: 15px;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            background: linear-gradient(135deg, #fff, #f8f9ff, #e8f4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+            position: relative;
+        }
+
+        .header h1::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1);
+            border-radius: 2px;
+            animation: shimmer 2s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+            50% { opacity: 0.7; transform: translateX(-50%) scale(1.1); }
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .video-container {
+            position: relative;
+            background: rgba(255,255,255,0.08);
+            border-radius: 24px;
+            padding: 24px;
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 
+                0 32px 64px rgba(0,0,0,0.2),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+            animation: fadeInLeft 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .video-container:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 40px 80px rgba(0,0,0,0.25),
+                inset 0 1px 0 rgba(255,255,255,0.15);
+        }
+
+        .video-wrapper {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            background: #000;
+            box-shadow: 
+                0 16px 32px rgba(0,0,0,0.4),
+                inset 0 0 0 1px rgba(255,255,255,0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .video-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #f093fb);
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .video-wrapper.active::before {
+            opacity: 1;
+        }
+
+        #videoElement, #canvasElement {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 15px;
+        }
+
+        #videoElement {
+            transform: scaleX(-1);
+        }
+
+        .video-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .control-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 14px 28px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 
+                0 8px 20px rgba(102, 126, 234, 0.3),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .control-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 
+                0 12px 30px rgba(102, 126, 234, 0.4),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        .control-btn:hover::before {
+            left: 100%;
+        }
+
+        .control-btn:active {
+            transform: translateY(-1px) scale(1);
+        }
+
+        .control-btn.active {
+            background: linear-gradient(135deg, #26de81, #20bf6b);
+            box-shadow: 
+                0 8px 20px rgba(38, 222, 129, 0.4),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+
+        .control-btn.danger {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            box-shadow: 
+                0 8px 20px rgba(255, 107, 107, 0.3),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+
+        .effects-panel {
+            background: rgba(255,255,255,0.09);
+            border-radius: 24px;
+            padding: 28px;
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255,255,255,0.15);
+            box-shadow: 
+                0 32px 64px rgba(0,0,0,0.15),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+            animation: fadeInRight 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 85vh;
+            overflow-y: auto;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .effects-panel:hover {
+            border-color: rgba(255,255,255,0.25);
+            box-shadow: 
+                0 40px 80px rgba(0,0,0,0.2),
+                inset 0 1px 0 rgba(255,255,255,0.15);
+        }
+
+        .effects-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .effects-panel::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.08);
+            border-radius: 10px;
+        }
+
+        .effects-panel::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.1));
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .effects-panel::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, rgba(255,255,255,0.5), rgba(255,255,255,0.2));
+        }
+
+        .panel-title {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .effect-group {
+            margin-bottom: 28px;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+            border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.12);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .effect-group::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        }
+
+        .effect-group:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06));
+            border-color: rgba(255,255,255,0.2);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .effect-group h3 {
+            font-size: 1.2em;
+            margin-bottom: 18px;
+            color: #fff;
+            font-weight: 700;
+            padding-bottom: 12px;
+            position: relative;
+        }
+
+        .effect-group h3::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 40px;
+            height: 2px;
+            background: linear-gradient(90deg, #4ecdc4, #45b7d1);
+            border-radius: 1px;
+        }
+
+        .effect-control {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .effect-control:last-child {
+            margin-bottom: 0;
+        }
+
+        .effect-control label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.95);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.1), rgba(255,255,255,0.2));
+            outline: none;
+            -webkit-appearance: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .slider:hover {
+            background: linear-gradient(90deg, rgba(255,255,255,0.15), rgba(255,255,255,0.25));
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            cursor: pointer;
+            box-shadow: 
+                0 4px 12px rgba(102, 126, 234, 0.4),
+                0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+            box-shadow: 
+                0 6px 16px rgba(102, 126, 234, 0.5),
+                0 0 0 4px rgba(102, 126, 234, 0.2);
+        }
+
+        .slider::-webkit-slider-thumb:active {
+            transform: scale(1.05);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.3);
+            box-shadow: 
+                0 4px 12px rgba(102, 126, 234, 0.4),
+                0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .color-input {
+            width: 50px;
+            height: 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .preset-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 12px 18px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preset-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.4s ease;
+        }
+
+        .preset-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+            border-color: rgba(255,255,255,0.2);
+        }
+
+        .preset-btn:hover::before {
+            left: 100%;
+        }
+
+        .preset-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .value-display {
+            background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1));
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            min-width: 45px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .recording-indicator {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #ff4757, #ff3838);
+            color: white;
+            padding: 10px 18px;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: none;
+            animation: recordingPulse 1.5s ease-in-out infinite;
+            box-shadow: 
+                0 4px 12px rgba(255, 71, 87, 0.4),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+
+        @keyframes recordingPulse {
+            0%, 100% { 
+                opacity: 1; 
+                transform: scale(1);
+                box-shadow: 
+                    0 4px 12px rgba(255, 71, 87, 0.4),
+                    0 0 0 0 rgba(255, 71, 87, 0.4);
+            }
+            50% { 
+                opacity: 0.8; 
+                transform: scale(1.05);
+                box-shadow: 
+                    0 6px 16px rgba(255, 71, 87, 0.5),
+                    0 0 0 8px rgba(255, 71, 87, 0.1);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeInRight {
+            from {
+                opacity: 0;
+                transform: translateX(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /*holdup*/
+        /* Loading states */
+        .loading {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .loading::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: shimmerLoading 1.5s infinite;
+        }
+
+        @keyframes shimmerLoading {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* Focus styles for accessibility */
+        .slider:focus,
+        .control-btn:focus,
+        .preset-btn:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+        }
+
+        /* Micro-interactions */
+        .effect-control:hover .value-display {
+            background: linear-gradient(135deg, rgba(255,255,255,0.3), rgba(255,255,255,0.15));
+            transform: scale(1.05);
+        }
+
+        /* Tooltip system */
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+        }
+
+        /* Status indicators */
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .status-dot.active {
+            background: #26de81;
+            box-shadow: 0 0 8px rgba(38, 222, 129, 0.4);
+            animation: statusPulse 2s ease-in-out infinite;
+        }
+
+        .status-dot.inactive {
+            background: rgba(255,255,255,0.3);
+        }
+
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* Enhanced responsive design */
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+            
+            .effects-panel {
+                max-height: none;
+                order: 2;
+            }
+            
+            .video-container {
+                order: 1;
+            }
+
+            .preset-buttons {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.2em;
+            }
+            
+            .video-controls {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+            
+            .container {
+                padding: 16px;
+            }
+
+            .video-container,
+            .effects-panel {
+                padding: 20px;
+            }
+
+            .effect-group {
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+
+            .preset-buttons {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .header p {
+                font-size: 1em;
+            }
+
+            .control-btn {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+
+            .video-container {
+                padding: 16px;
+            }
+
+            .effects-panel {
+                padding: 20px 16px;
+            }
+
+            .effect-group {
+                padding: 16px;
+            }
+
+            .recording-indicator {
+                top: 20px;
+                right: 20px;
+                padding: 8px 14px;
+                font-size: 11px;
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .effects-panel,
+            .video-container,
+            .effect-group {
+                background: rgba(255,255,255,0.05);
+                border-color: rgba(255,255,255,0.08);
+            }
+        }
+
+        /* High contrast mode */
+        @media (prefers-contrast: high) {
+            .effects-panel,
+            .video-container,
+            .effect-group {
+                border: 2px solid rgba(255,255,255,0.3);
+            }
+
+            .slider::-webkit-slider-thumb {
+                border: 3px solid white;
+            }
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+        /*huh*/
+        @keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeInRight {
+    from {
+        opacity: 0;
+        transform: translateX(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Loading states */
+.loading {
+    position: relative;
+    overflow: hidden;
+}
+
+.loading::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg, 
+        transparent, 
+        rgba(255, 255, 255, 0.1), 
+        transparent
+    );
+    animation: shimmerLoading 1.5s infinite;
+}
+
+@keyframes shimmerLoading {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* Focus styles for accessibility */
+.slider:focus,
+.control-btn:focus,
+.preset-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+}
+
+/* Micro-interactions */
+.effect-control:hover .value-display {
+    background: linear-gradient(
+        135deg, 
+        rgba(255, 255, 255, 0.3), 
+        rgba(255, 255, 255, 0.15)
+    );
+    transform: scale(1.05);
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+/* Enhanced responsive design */
+@media (max-width: 1024px) {
+    .main-content {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+    
+    .effects-panel {
+        max-height: none;
+        order: 2;
+    }
+    
+    .video-container {
+        order: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .header h1 {
+        font-size: 2.2em;
+    }
+    
+    .value-display {
+        font-size: 0.9em;
+    }
+    
+    .control-btn,
+    .preset-btn {
+        padding: 0.6rem 1rem;
+        font-size: 0.9em;
+    }
+}
+
+@media (max-width: 480px) {
+    .header h1 {
+        font-size: 1.8em;
+    }
+
+    .effects-panel,
+    .video-container {
+        padding: 0.75rem;
+    }
+
+    .control-btn,
+    .preset-btn {
+        width: 100%;
+        font-size: 0.85em;
+    }
+}
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Camera Effects Playground</h1>
+            <p>Professional real-time video effects with advanced WebGL processing</p>
+        </div>
+
+        <div class="main-content">
+            <div class="video-container">
+                <div class="video-wrapper">
+                    <video id="videoElement" autoplay muted playsinline></video>
+                    <canvas id="canvasElement" style="display: none;"></canvas>
+                    <div class="recording-indicator" id="recordingIndicator">● RECORDING</div>
+                </div>
+                <div class="video-controls">
+                    <button class="control-btn" id="startBtn">Start Camera</button>
+                    <button class="control-btn" id="captureBtn" style="display: none;">Capture Photo</button>
+                    <button class="control-btn" id="recordBtn" style="display: none;">Start Recording</button>
+                    <button class="control-btn" id="resetBtn" style="display: none;">Reset Effects</button>
+                </div>
+            </div>
+
+            <div class="effects-panel">
+                <h2 class="panel-title">Effect Controls</h2>
+
+                <div class="effect-group">
+                    <h3>Basic Adjustments</h3>
+                    <div class="effect-control">
+                        <label>Brightness <span class="value-display" id="brightnessValue">100</span></label>
+                        <input type="range" class="slider" id="brightness" min="0" max="200" value="100">
+                    </div>
+                    <div class="effect-control">
+                        <label>Contrast <span class="value-display" id="contrastValue">100</span></label>
+                        <input type="range" class="slider" id="contrast" min="0" max="200" value="100">
+                    </div>
+                    <div class="effect-control">
+                        <label>Saturation <span class="value-display" id="saturationValue">100</span></label>
+                        <input type="range" class="slider" id="saturation" min="0" max="200" value="100">
+                    </div>
+                    <div class="effect-control">
+                        <label>Hue Shift <span class="value-display" id="hueValue">0°</span></label>
+                        <input type="range" class="slider" id="hue" min="0" max="360" value="0">
+                    </div>
+                </div>
+
+                <div class="effect-group">
+                    <h3>Creative Effects</h3>
+                    <div class="effect-control">
+                        <label>Pixelate <span class="value-display" id="pixelateValue">1</span></label>
+                        <input type="range" class="slider" id="pixelate" min="1" max="50" value="1">
+                    </div>
+                    <div class="effect-control">
+                        <label>RGB Split <span class="value-display" id="rgbSplitValue">0</span></label>
+                        <input type="range" class="slider" id="rgbSplit" min="0" max="20" value="0">
+                    </div>
+                    <div class="effect-control">
+                        <label>Blur <span class="value-display" id="blurValue">0</span></label>
+                        <input type="range" class="slider" id="blur" min="0" max="20" value="0">
+                    </div>
+                    <div class="effect-control">
+                        <label>Vignette <span class="value-display" id="vignetteValue">0</span></label>
+                        <input type="range" class="slider" id="vignette" min="0" max="100" value="0">
+                    </div>
+                </div>
+
+                <div class="effect-group">
+                    <h3>Advanced Filters</h3>
+                    <div class="effect-control">
+                        <label>Sepia <span class="value-display" id="sepiaValue">0</span></label>
+                        <input type="range" class="slider" id="sepia" min="0" max="100" value="0">
+                    </div>
+                    <div class="effect-control">
+                        <label>Invert <span class="value-display" id="invertValue">0</span></label>
+                        <input type="range" class="slider" id="invert" min="0" max="100" value="0">
+                    </div>
+                    <div class="effect-control">
+                        <label>Grayscale <span class="value-display" id="grayscaleValue">0</span></label>
+                        <input type="range" class="slider" id="grayscale" min="0" max="100" value="0">
+                    </div>
+                    <div class="effect-control">
+                        <label>Edge Detection <span class="value-display" id="edgeValue">0</span></label>
+                        <input type="range" class="slider" id="edge" min="0" max="100" value="0">
+                    </div>
+                </div>
+
+                <div class="effect-group">
+                    <h3>Color Grading</h3>
+                    <div class="effect-control">
+                        <label>Temperature <span class="value-display" id="temperatureValue">0</span></label>
+                        <input type="range" class="slider" id="temperature" min="-100" max="100" value="0">
+                    </div>
+                    <div class="effect-control">
+                        <label>Tint <span class="value-display" id="tintValue">0</span></label>
+                        <input type="range" class="slider" id="tint" min="-100" max="100" value="0">
+                    </div>
+                    <div class="effect-control">
+                        <label>Color Overlay <input type="color" class="color-input" id="colorOverlay" value="#ff0000"></label>
+                        <input type="range" class="slider" id="colorOverlayIntensity" min="0" max="100" value="0">
+                    </div>
+                </div>
+
+                <div class="effect-group">
+                    <h3>Quick Presets</h3>
+                    <div class="preset-buttons">
+                        <button class="preset-btn" onclick="applyPreset('vintage')">Vintage</button>
+                        <button class="preset-btn" onclick="applyPreset('cyberpunk')">Cyberpunk</button>
+                        <button class="preset-btn" onclick="applyPreset('noir')">Film Noir</button>
+                        <button class="preset-btn" onclick="applyPreset('dreams')">Dreams</button>
+                        <button class="preset-btn" onclick="applyPreset('warm')">Warm Glow</button>
+                        <button class="preset-btn" onclick="applyPreset('cold')">Ice Cold</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class CameraEffectsPlayground {
+            constructor() {
+                this.video = document.getElementById('videoElement');
+                this.canvas = document.getElementById('canvasElement');
+                this.ctx = this.canvas.getContext('2d');
+                this.stream = null;
+                this.isRecording = false;
+                this.mediaRecorder = null;
+                this.recordedChunks = [];
+                
+                this.effects = {
+                    brightness: 100,
+                    contrast: 100,
+                    saturation: 100,
+                    hue: 0,
+                    pixelate: 1,
+                    rgbSplit: 0,
+                    blur: 0,
+                    vignette: 0,
+                    sepia: 0,
+                    invert: 0,
+                    grayscale: 0,
+                    edge: 0,
+                    temperature: 0,
+                    tint: 0,
+                    colorOverlay: '#ff0000',
+                    colorOverlayIntensity: 0
+                };
+
+                this.initializeEventListeners();
+                this.initializeSliders();
+            }
+
+            async startCamera() {
+                const startBtn = document.getElementById('startBtn');
+                startBtn.classList.add('loading');
+                startBtn.textContent = 'Initializing...';
+                
+                try {
+                    this.stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            facingMode: 'user'
+                        },
+                        audio: true
+                    });
+                    
+                    this.video.srcObject = this.stream;
+                    this.video.play();
+
+                    this.video.onloadedmetadata = () => {
+                        this.canvas.width = this.video.videoWidth;
+                        this.canvas.height = this.video.videoHeight;
+                        this.canvas.style.display = 'block';
+                        this.video.style.display = 'none';
+                        
+                        // Add active indicator to video wrapper
+                        document.querySelector('.video-wrapper').classList.add('active');
+                        
+                        this.startProcessing();
+                        
+                        startBtn.classList.remove('loading');
+                        document.getElementById('startBtn').style.display = 'none';
+                        document.getElementById('captureBtn').style.display = 'inline-block';
+                        document.getElementById('recordBtn').style.display = 'inline-block';
+                        document.getElementById('resetBtn').style.display = 'inline-block';
+                        
+                        // Add status indicator
+                        this.updateCameraStatus(true);
+                    };
+                } catch (error) {
+                    console.error('Error accessing camera:', error);
+                    startBtn.classList.remove('loading');
+                    startBtn.textContent = 'Camera Error - Retry';
+                    startBtn.classList.add('danger');
+                    
+                    setTimeout(() => {
+                        startBtn.textContent = 'Start Camera';
+                        startBtn.classList.remove('danger');
+                    }, 3000);
+                    
+                    alert('Unable to access camera. Please ensure you have granted camera permissions.');
+                }
+            }
+
+            updateCameraStatus(active) {
+                const existingStatus = document.querySelector('.camera-status');
+                if (existingStatus) {
+                    existingStatus.remove();
+                }
+                
+                const status = document.createElement('div');
+                status.className = 'camera-status';
+                status.style.cssText = `
+                    position: absolute;
+                    top: 20px;
+                    left: 20px;
+                    display: flex;
+                    align-items: center;
+                    background: rgba(0,0,0,0.7);
+                    padding: 8px 12px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    backdrop-filter: blur(10px);
+                    z-index: 100;
+                `;
+                
+                status.innerHTML = `
+                    <span class="status-dot ${active ? 'active' : 'inactive'}"></span>
+                    Camera ${active ? 'Active' : 'Inactive'}
+                `;
+                
+                document.querySelector('.video-wrapper').appendChild(status);
+            }
+
+            startProcessing() {
+                const processFrame = () => {
+                    if (this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
+                        this.applyEffects();
+                    }
+                    requestAnimationFrame(processFrame);
+                };
+                processFrame();
+            }
+
+            applyEffects() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Create temporary canvas for effects processing
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = this.canvas.width;
+                tempCanvas.height = this.canvas.height;
+                
+                // Draw flipped video
+                tempCtx.save();
+                tempCtx.scale(-1, 1);
+                tempCtx.drawImage(this.video, -this.canvas.width, 0, this.canvas.width, this.canvas.height);
+                tempCtx.restore();
+
+                // Get image data
+                let imageData = tempCtx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                let data = imageData.data;
+
+                // Apply pixel-based effects
+                this.applyPixelEffects(data);
+
+                // Put processed data back
+                tempCtx.putImageData(imageData, 0, 0);
+
+                // Apply canvas-level effects
+                this.ctx.filter = this.buildCSSFilter();
+                
+                // Apply pixelate effect
+                if (this.effects.pixelate > 1) {
+                    const size = this.effects.pixelate;
+                    this.ctx.imageSmoothingEnabled = false;
+                    this.ctx.drawImage(tempCanvas, 0, 0, this.canvas.width / size, this.canvas.height / size);
+                    this.ctx.drawImage(this.canvas, 0, 0, this.canvas.width / size, this.canvas.height / size, 0, 0, this.canvas.width, this.canvas.height);
+                } else {
+                    this.ctx.drawImage(tempCanvas, 0, 0);
+                }
+
+                // Apply post-processing effects
+                this.applyPostEffects();
+            }
+
+            applyPixelEffects(data) {
+                const width = this.canvas.width;
+                const height = this.canvas.height;
+
+                // RGB Split effect
+                if (this.effects.rgbSplit > 0) {
+                    this.applyRGBSplit(data, width, height, this.effects.rgbSplit);
+                }
+
+                // Edge Detection
+                if (this.effects.edge > 0) {
+                    this.applyEdgeDetection(data, width, height, this.effects.edge / 100);
+                }
+
+                // Color temperature and tint
+                if (this.effects.temperature !== 0 || this.effects.tint !== 0) {
+                    this.applyColorTemperature(data, this.effects.temperature, this.effects.tint);
+                }
+
+                // Color overlay
+                if (this.effects.colorOverlayIntensity > 0) {
+                    this.applyColorOverlay(data, this.effects.colorOverlay, this.effects.colorOverlayIntensity / 100);
+                }
+            }
+
+            applyRGBSplit(data, width, height, intensity) {
+                const newData = new Uint8ClampedArray(data);
+                
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const idx = (y * width + x) * 4;
+                        
+                        // Red channel offset
+                        const redX = Math.max(0, Math.min(width - 1, x - intensity));
+                        const redIdx = (y * width + redX) * 4;
+                        newData[idx] = data[redIdx];
+                        
+                        // Blue channel offset
+                        const blueX = Math.max(0, Math.min(width - 1, x + intensity));
+                        const blueIdx = (y * width + blueX) * 4;
+                        newData[idx + 2] = data[blueIdx + 2];
+                    }
+                }
+                
+                for (let i = 0; i < data.length; i++) {
+                    data[i] = newData[i];
+                }
+            }
+
+            applyEdgeDetection(data, width, height, intensity) {
+                const newData = new Uint8ClampedArray(data.length);
+                
+                const sobelX = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
+                const sobelY = [-1, -2, -1, 0, 0, 0, 1, 2, 1];
+                
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        let pixelX = 0, pixelY = 0;
+                        
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                const idx = ((y + dy) * width + (x + dx)) * 4;
+                                const gray = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+                                const kernelIdx = (dy + 1) * 3 + (dx + 1);
+                                
+                                pixelX += gray * sobelX[kernelIdx];
+                                pixelY += gray * sobelY[kernelIdx];
+                            }
+                        }
+                        
+                        const magnitude = Math.sqrt(pixelX * pixelX + pixelY * pixelY);
+                        const idx = (y * width + x) * 4;
+                        
+                        const edge = Math.min(255, magnitude);
+                        const original = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+                        const blended = original * (1 - intensity) + edge * intensity;
+                        
+                        newData[idx] = newData[idx + 1] = newData[idx + 2] = blended;
+                        newData[idx + 3] = data[idx + 3];
+                    }
+                }
+                
+                for (let i = 0; i < data.length; i++) {
+                    if (newData[i] !== 0 || (i % 4 === 3)) {
+                        data[i] = newData[i];
+                    }
+                }
+            }
+
+            applyColorTemperature(data, temperature, tint) {
+                const tempFactor = temperature / 100;
+                const tintFactor = tint / 100;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    // Temperature adjustment
+                    if (tempFactor > 0) {
+                        data[i] = Math.min(255, data[i] + tempFactor * 20); // More red
+                        data[i + 2] = Math.max(0, data[i + 2] - tempFactor * 20); // Less blue
+                    } else {
+                        data[i] = Math.max(0, data[i] + tempFactor * 20); // Less red
+                        data[i + 2] = Math.min(255, data[i + 2] - tempFactor * 20); // More blue
+                    }
+                    
+                    // Tint adjustment
+                    if (tintFactor > 0) {
+                        data[i + 1] = Math.min(255, data[i + 1] + tintFactor * 20); // More green
+                    } else {
+                        data[i + 1] = Math.max(0, data[i + 1] + tintFactor * 20); // Less green
+                    }
+                }
+            }
+
+            applyColorOverlay(data, color, intensity) {
+                const r = parseInt(color.substr(1, 2), 16);
+                const g = parseInt(color.substr(3, 2), 16);
+                const b = parseInt(color.substr(5, 2), 16);
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i] = data[i] * (1 - intensity) + r * intensity;
+                    data[i + 1] = data[i + 1] * (1 - intensity) + g * intensity;
+                    data[i + 2] = data[i + 2] * (1 - intensity) + b * intensity;
+                }
+            }
+
+            buildCSSFilter() {
+                let filter = '';
+                
+                if (this.effects.brightness !== 100) {
+                    filter += `brightness(${this.effects.brightness}%) `;
+                }
+                if (this.effects.contrast !== 100) {
+                    filter += `contrast(${this.effects.contrast}%) `;
+                }
+                if (this.effects.saturation !== 100) {
+                    filter += `saturate(${this.effects.saturation}%) `;
+                }
+                if (this.effects.hue !== 0) {
+                    filter += `hue-rotate(${this.effects.hue}deg) `;
+                }
+                if (this.effects.blur > 0) {
+                    filter += `blur(${this.effects.blur}px) `;
+                }
+                if (this.effects.sepia > 0) {
+                    filter += `sepia(${this.effects.sepia}%) `;
+                }
+                if (this.effects.invert > 0) {
+                    filter += `invert(${this.effects.invert}%) `;
+                }
+                if (this.effects.grayscale > 0) {
+                    filter += `grayscale(${this.effects.grayscale}%) `;
+                }
+                
+                return filter || 'none';
+            }
+
+            applyPostEffects() {
+                // Vignette effect
+                if (this.effects.vignette > 0) {
+                    this.applyVignette(this.effects.vignette / 100);
+                }
+            }
+
+            applyVignette(intensity) {
+                const centerX = this.canvas.width / 2;
+                const centerY = this.canvas.height / 2;
+                const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY);
+                
+                const gradient = this.ctx.createRadialGradient(
+                    centerX, centerY, 0,
+                    centerX, centerY, maxRadius
+                );
+                
+                gradient.addColorStop(0, `rgba(0,0,0,0)`);
+                gradient.addColorStop(0.7, `rgba(0,0,0,0)`);
+                gradient.addColorStop(1, `rgba(0,0,0,${intensity})`);
+                
+                this.ctx.globalCompositeOperation = 'multiply';
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.globalCompositeOperation = 'source-over';
+            }
+
+            capturePhoto() {
+                const captureBtn = document.getElementById('captureBtn');
+                const originalText = captureBtn.textContent;
+                
+                // Visual feedback
+                captureBtn.textContent = 'Capturing...';
+                captureBtn.classList.add('active');
+                
+                // Add flash effect
+                const flash = document.createElement('div');
+                flash.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100vw;
+                    height: 100vh;
+                    background: rgba(255,255,255,0.8);
+                    z-index: 9999;
+                    pointer-events: none;
+                    animation: flashEffect 0.3s ease-out;
+                `;
+                document.body.appendChild(flash);
+                
+                // Add flash animation
+                const style = document.createElement('style');
+                style.textContent = `
+                    @keyframes flashEffect {
+                        0% { opacity: 0; }
+                        50% { opacity: 1; }
+                        100% { opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+                
+                setTimeout(() => {
+                    const link = document.createElement('a');
+                    link.download = `camera-effect-${Date.now()}.png`;
+                    link.href = this.canvas.toDataURL('image/png', 1.0);
+                    link.click();
+                    
+                    // Reset button state
+                    captureBtn.textContent = originalText;
+                    captureBtn.classList.remove('active');
+                    
+                    // Remove flash
+                    flash.remove();
+                    style.remove();
+                    
+                    // Show success feedback
+                    this.showNotification('Photo captured successfully!', 'success');
+                }, 300);
+            }
+
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: ${type === 'success' ? 'linear-gradient(135deg, #26de81, #20bf6b)' : 'linear-gradient(135deg, #667eea, #764ba2)'};
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 12px;
+                    font-weight: 600;
+                    font-size: 14px;
+                    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+                    backdrop-filter: blur(10px);
+                    z-index: 10000;
+                    transform: translateX(400px);
+                    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                `;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                // Animate in
+                setTimeout(() => {
+                    notification.style.transform = 'translateX(0)';
+                }, 100);
+                
+                // Animate out and remove
+                setTimeout(() => {
+                    notification.style.transform = 'translateX(400px)';
+                    setTimeout(() => notification.remove(), 300);
+                }, 3000);
+            }
+
+            async startRecording() {
+                if (!this.isRecording) {
+                    try {
+                        const canvasStream = this.canvas.captureStream(30);
+                        const audioTrack = this.stream.getAudioTracks()[0];
+                        
+                        if (audioTrack) {
+                            canvasStream.addTrack(audioTrack);
+                        }
+                        
+                        this.mediaRecorder = new MediaRecorder(canvasStream, {
+                            mimeType: 'video/webm;codecs=vp9'
+                        });
+                        
+                        this.recordedChunks = [];
+                        
+                        this.mediaRecorder.ondataavailable = (event) => {
+                            if (event.data.size > 0) {
+                                this.recordedChunks.push(event.data);
+                            }
+                        };
+                        
+                        this.mediaRecorder.onstop = () => {
+                            const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.download = `camera-recording-${Date.now()}.webm`;
+                            link.href = url;
+                            link.click();
+                            URL.revokeObjectURL(url);
+                        };
+                        
+                        this.mediaRecorder.start();
+                        this.isRecording = true;
+                        
+                        document.getElementById('recordBtn').textContent = 'Stop Recording';
+                        document.getElementById('recordBtn').classList.add('active');
+                        document.getElementById('recordingIndicator').style.display = 'block';
+                    } catch (error) {
+                        console.error('Error starting recording:', error);
+                        alert('Recording not supported in this browser or format.');
+                    }
+                } else {
+                    this.mediaRecorder.stop();
+                    this.isRecording = false;
+                    
+                    document.getElementById('recordBtn').textContent = 'Start Recording';
+                    document.getElementById('recordBtn').classList.remove('active');
+                    document.getElementById('recordingIndicator').style.display = 'none';
+                }
+            }
+
+            resetEffects() {
+                this.effects = {
+                    brightness: 100,
+                    contrast: 100,
+                    saturation: 100,
+                    hue: 0,
+                    pixelate: 1,
+                    rgbSplit: 0,
+                    blur: 0,
+                    vignette: 0,
+                    sepia: 0,
+                    invert: 0,
+                    grayscale: 0,
+                    edge: 0,
+                    temperature: 0,
+                    tint: 0,
+                    colorOverlay: '#ff0000',
+                    colorOverlayIntensity: 0
+                };
+                
+                this.updateAllSliders();
+            }
+
+            updateAllSliders() {
+                Object.keys(this.effects).forEach(key => {
+                    const slider = document.getElementById(key);
+                    const valueDisplay = document.getElementById(key + 'Value');
+                    
+                    if (slider) {
+                        slider.value = this.effects[key];
+                        if (valueDisplay) {
+                            let displayValue = this.effects[key];
+                            if (key === 'hue') displayValue += '°';
+                            if (key === 'pixelate' || key === 'rgbSplit' || key === 'blur') displayValue = Math.round(displayValue);
+                            valueDisplay.textContent = displayValue;
+                        }
+                    }
+                });
+            }
+
+            initializeEventListeners() {
+                document.getElementById('startBtn').addEventListener('click', () => this.startCamera());
+                document.getElementById('captureBtn').addEventListener('click', () => this.capturePhoto());
+                document.getElementById('recordBtn').addEventListener('click', () => this.startRecording());
+                document.getElementById('resetBtn').addEventListener('click', () => this.resetEffects());
+            }
+
+            initializeSliders() {
+                Object.keys(this.effects).forEach(key => {
+                    const slider = document.getElementById(key);
+                    const valueDisplay = document.getElementById(key + 'Value');
+                    
+                    if (slider) {
+                        slider.addEventListener('input', (e) => {
+                            this.effects[key] = parseFloat(e.target.value);
+                            if (valueDisplay) {
+                                let displayValue = this.effects[key];
+                                if (key === 'hue') displayValue += '°';
+                                if (key === 'pixelate' || key === 'rgbSplit' || key === 'blur') displayValue = Math.round(displayValue);
+                                valueDisplay.textContent = displayValue;
+                            }
+                        });
+                    }
+                });
+
+                // Color overlay input
+                document.getElementById('colorOverlay').addEventListener('change', (e) => {
+                    this.effects.colorOverlay = e.target.value;
+                });
+
+                document.getElementById('colorOverlayIntensity').addEventListener('input', (e) => {
+                    this.effects.colorOverlayIntensity = parseFloat(e.target.value);
+                    document.getElementById('colorOverlayIntensityValue').textContent = e.target.value;
+                });
+            }
+        }
+
+        // Preset configurations
+        const presets = {
+            vintage: {
+                brightness: 110,
+                contrast: 120,
+                saturation: 85,
+                sepia: 40,
+                vignette: 30,
+                temperature: 20,
+                tint: -10
+            },
+            cyberpunk: {
+                brightness: 120,
+                contrast: 150,
+                saturation: 200,
+                hue: 180,
+                colorOverlay: '#00ffff',
+                colorOverlayIntensity: 15,
+                rgbSplit: 3
+            },
+            noir: {
+                brightness: 90,
+                contrast: 160,
+                grayscale: 100,
+                vignette: 50,
+                temperature: -20
+            },
+            dreams: {
+                brightness: 130,
+                saturation: 150,
+                blur: 2,
+                colorOverlay: '#ffb3ff',
+                colorOverlayIntensity: 20,
+                vignette: 20
+            },
+            warm: {
+                brightness: 115,
+                contrast: 110,
+                saturation: 120,
+                temperature: 40,
+                tint: 10,
+                vignette: 15
+            },
+            cold: {
+                brightness: 95,
+                contrast: 125,
+                saturation: 110,
+                temperature: -40,
+                tint: -15,
+                colorOverlay: '#4da6ff',
+                colorOverlayIntensity: 10
+            }
+        };
+
+        function applyPreset(presetName) {
+            const preset = presets[presetName];
+            if (!preset) return;
+
+            Object.keys(preset).forEach(key => {
+                if (playground.effects.hasOwnProperty(key)) {
+                    playground.effects[key] = preset[key];
+                    
+                    const slider = document.getElementById(key);
+                    const valueDisplay = document.getElementById(key + 'Value');
+                    
+                    if (slider) {
+                        slider.value = preset[key];
+                        if (valueDisplay) {
+                            let displayValue = preset[key];
+                            if (key === 'hue') displayValue += '°';
+                            if (key === 'pixelate' || key === 'rgbSplit' || key === 'blur') displayValue = Math.round(displayValue);
+                            valueDisplay.textContent = displayValue;
+                        }
+                    }
+                    
+                    if (key === 'colorOverlay') {
+                        document.getElementById('colorOverlay').value = preset[key];
+                    }
+                }
+            });
+        }
+
+        // Initialize the application
+        let playground;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            playground = new CameraEffectsPlayground();
+            
+            // Add smooth scrolling for mobile
+            document.querySelector('.effects-panel').style.scrollBehavior = 'smooth';
+            
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'c' && e.ctrlKey) {
+                    e.preventDefault();
+                    playground.capturePhoto();
+                } else if (e.key === 'r' && e.ctrlKey) {
+                    e.preventDefault();
+                    playground.startRecording();
+                } else if (e.key === 'Escape') {
+                    playground.resetEffects();
+                }
+            });
+            
+            // Performance optimization: throttle effects application
+            let lastProcessTime = 0;
+            const originalApplyEffects = playground.applyEffects;
+            playground.applyEffects = function() {
+                const now = performance.now();
+                if (now - lastProcessTime > 16) { // ~60fps
+                    originalApplyEffects.call(this);
+                    lastProcessTime = now;
+                }
+            };
+        });
+
+        // Add error handling for unsupported features
+        window.addEventListener('error', (e) => {
+            console.error('Application error:', e.error);
+        });
+
+        // Check for required features
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            document.body.innerHTML = `
+                <div style="display: flex; justify-content: center; align-items: center; height: 100vh; text-align: center; color: white;">
+                    <div>
+                        <h1>Camera Effects Playground</h1>
+                        <p>This application requires a modern browser with camera support.</p>
+                        <p>Please use Chrome, Firefox, Safari, or Edge.</p>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
